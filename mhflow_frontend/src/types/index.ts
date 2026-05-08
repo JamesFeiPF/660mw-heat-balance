@@ -18,17 +18,23 @@ export interface Port {
   m: number
   /** 熵 (kJ/(kg·K)) */
   s: number
+  /** 功率 (MW) - 用于能量端口 */
+  w?: number
 }
 
 /** 元件类型枚举 */
 export type ComponentType =
   | 'boiler'        // 锅炉
-  | 'turbine'       // 汽轮机
+  | 'turbine'       // 汽轮机缸体（通用）
+  | 'turbine_hp'    // 汽轮机-高压缸
+  | 'turbine_ip'    // 汽轮机-中压缸
+  | 'turbine_lp'    // 汽轮机-低压缸
   | 'condenser'     // 凝汽器
   | 'heater'        // 加热器
   | 'pump'          // 水泵
   | 'pipe'          // 管道
   | 'generator'     // 发电机
+  | 'tee'           // 三通（用于抽汽分流）
 
 /** 元件参数定义 */
 export interface ComponentParamDef {
@@ -39,6 +45,10 @@ export interface ComponentParamDef {
   min: number
   max: number
   step: number
+  /** 是否为必填参数（黄色标记） */
+  required?: boolean
+  /** 参数说明 */
+  description?: string
 }
 
 /** 元件接口 */
@@ -51,7 +61,7 @@ export interface Component {
   /** 画布上的Y坐标 */
   y: number
   /** 元件参数 */
-  params: Record<string, number>
+  params: Record<string, number | string | unknown>
   inlet_ports: Port[]
   outlet_ports: Port[]
 }
@@ -128,7 +138,7 @@ export interface ComponentTypeConfig {
   label: string
   color: string
   icon: string
-  defaultParams: Record<string, number>
+  defaultParams: Record<string, number | string | unknown>
   paramDefs: ComponentParamDef[]
   defaultInletPorts: Port[]
   defaultOutletPorts: Port[]

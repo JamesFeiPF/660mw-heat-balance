@@ -29,8 +29,12 @@
               class="param-item"
             >
               <label class="param-label">
+                <span v-if="paramDef.required" class="required-flag" title="必填参数">*</span>
                 {{ paramDef.label }}
                 <span class="param-unit">({{ paramDef.unit }})</span>
+                <el-tooltip v-if="paramDef.description" :content="paramDef.description" placement="top">
+                  <span class="param-help">?</span>
+                </el-tooltip>
               </label>
               <el-input-number
                 :model-value="selectedComponent.params[paramDef.key]"
@@ -91,11 +95,46 @@
           <!-- 计算结果 - 设备级别 -->
           <div class="section-title">计算结果</div>
           <div class="calc-results" v-if="componentResult">
-            <div class="result-item" v-for="(value, key) in componentResult.extra_params" :key="key">
-              <span class="result-label">{{ getResultLabel(key) }}</span>
-              <span class="result-value">{{ formatResultValue(key, value) }}</span>
+            <!-- 进口参数 -->
+            <div class="port-section" v-if="componentResult.inlet_ports && componentResult.inlet_ports.length > 0">
+              <div class="port-section-title">进口参数</div>
+              <div class="port-detail" v-for="(port, idx) in componentResult.inlet_ports" :key="'in-' + idx">
+                <span class="port-name">{{ port.name }}</span>
+                <div class="port-values">
+                  <span class="port-value" :class="{ 'has-value': port.p > 0 }">p: {{ port.p > 0 ? port.p.toFixed(3) : '-' }} MPa</span>
+                  <span class="port-value" :class="{ 'has-value': port.t > 0 }">t: {{ port.t > 0 ? port.t.toFixed(1) : '-' }} °C</span>
+                  <span class="port-value" :class="{ 'has-value': port.m > 0 }">m: {{ port.m > 0 ? port.m.toFixed(2) : '-' }} kg/s</span>
+                  <span class="port-value" :class="{ 'has-value': port.h > 0 }">h: {{ port.h > 0 ? port.h.toFixed(0) : '-' }} kJ/kg</span>
+                </div>
+              </div>
             </div>
-            <div v-if="Object.keys(componentResult.extra_params).length === 0" class="empty-results">
+            
+            <!-- 出口参数 -->
+            <div class="port-section" v-if="componentResult.outlet_ports && componentResult.outlet_ports.length > 0">
+              <div class="port-section-title">出口参数</div>
+              <div class="port-detail" v-for="(port, idx) in componentResult.outlet_ports" :key="'out-' + idx">
+                <span class="port-name">{{ port.name }}</span>
+                <div class="port-values">
+                  <span class="port-value" :class="{ 'has-value': port.p > 0 }">p: {{ port.p > 0 ? port.p.toFixed(3) : '-' }} MPa</span>
+                  <span class="port-value" :class="{ 'has-value': port.t > 0 }">t: {{ port.t > 0 ? port.t.toFixed(1) : '-' }} °C</span>
+                  <span class="port-value" :class="{ 'has-value': port.m > 0 }">m: {{ port.m > 0 ? port.m.toFixed(2) : '-' }} kg/s</span>
+                  <span class="port-value" :class="{ 'has-value': port.h > 0 }">h: {{ port.h > 0 ? port.h.toFixed(0) : '-' }} kJ/kg</span>
+                </div>
+              </div>
+            </div>
+            
+            <!-- 其他计算结果 -->
+            <div class="other-results" v-if="Object.keys(componentResult.extra_params).length > 0">
+              <div class="port-section-title">性能指标</div>
+              <div class="result-item" v-for="(value, key) in componentResult.extra_params" :key="key">
+                <span class="result-label">{{ getResultLabel(key) }}</span>
+                <span class="result-value">{{ formatResultValue(key, value) }}</span>
+              </div>
+            </div>
+            
+            <div v-if="(!componentResult.inlet_ports || componentResult.inlet_ports.length === 0) && 
+                      (!componentResult.outlet_ports || componentResult.outlet_ports.length === 0) && 
+                      Object.keys(componentResult.extra_params).length === 0" class="empty-results">
               <span class="muted">暂无计算结果</span>
             </div>
           </div>
@@ -387,16 +426,30 @@ function onDeleteComponent() {
 
 function getComponentColor(type: string): string {
   const colors: Record<string, string> = {
-    boiler: '#e74c3c', turbine: '#3498db', condenser: '#1abc9c',
-    heater: '#f39c12', pump: '#9b59b6', pipe: '#95a5a6', generator: '#2ecc71',
+    boiler: '#e74c3c',
+    turbine_hp: '#3498db',
+    turbine_ip: '#2980b9',
+    turbine_lp: '#1a5276',
+    condenser: '#1abc9c',
+    heater: '#f39c12',
+    pump: '#9b59b6',
+    pipe: '#95a5a6',
+    generator: '#2ecc71',
   }
   return colors[type] || '#7f8c8d'
 }
 
 function getTypeLabel(type: string): string {
   const labels: Record<string, string> = {
-    boiler: '锅炉', turbine: '汽轮机', condenser: '凝汽器',
-    heater: '加热器', pump: '水泵', pipe: '管道', generator: '发电机',
+    boiler: '锅炉',
+    turbine_hp: '高压缸',
+    turbine_ip: '中压缸',
+    turbine_lp: '低压缸',
+    condenser: '凝汽器',
+    heater: '加热器',
+    pump: '水泵',
+    pipe: '管道',
+    generator: '发电机',
   }
   return labels[type] || type
 }
@@ -546,11 +599,28 @@ function getTypeLabel(type: string): string {
   font-size: 12px;
   color: #ccc;
   white-space: nowrap;
+  display: flex;
+  align-items: center;
+  gap: 3px;
 }
 
 .param-unit {
   color: #666;
   font-size: 10px;
+}
+
+.required-flag {
+  color: #f39c12;
+  font-weight: bold;
+  font-size: 14px;
+}
+
+.param-help {
+  color: #3498db;
+  font-size: 12px;
+  font-weight: bold;
+  cursor: help;
+  margin-left: 2px;
 }
 
 .param-input {
@@ -657,6 +727,27 @@ function getTypeLabel(type: string): string {
 .empty-results {
   padding: 8px;
   text-align: center;
+}
+
+.port-section {
+  margin-bottom: 12px;
+}
+
+.port-section-title {
+  font-size: 11px;
+  color: #3498db;
+  font-weight: 500;
+  margin-bottom: 6px;
+  padding-bottom: 4px;
+  border-bottom: 1px solid rgba(52, 152, 219, 0.2);
+}
+
+.port-value.has-value {
+  color: #2ecc71;
+}
+
+.other-results {
+  margin-top: 12px;
 }
 
 .delete-btn {

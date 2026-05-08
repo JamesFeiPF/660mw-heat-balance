@@ -17,6 +17,10 @@ class Generator(BaseComponent):
     参数:
         - eta_gen: 发电机效率 (0~1)
         - eta_mech: 机械传动效率 (0~1)
+        - rated_power: 额定功率 (MW)
+        - power_factor: 功率因数
+        - station_service_power_rate: 厂用电率 (%)
+        - efficiency: 效率 (%) - 兼容前端命名
     """
 
     def __init__(
@@ -35,6 +39,10 @@ class Generator(BaseComponent):
         default_params = {
             "eta_gen": 0.99,
             "eta_mech": 0.995,
+            "rated_power": 660.0,  # MW
+            "power_factor": 0.85,
+            "station_service_power_rate": 6.0,  # %
+            "efficiency": 98.5,  # % - 兼容前端命名
         }
 
         if inlet_ports is None:

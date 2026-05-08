@@ -25,6 +25,10 @@ class Condenser(BaseComponent):
         - delta_t_cw: 冷却水温升 (°C)
         - p_cond: 凝汽器压力 (MPa)
         - eta_heat_transfer: 传热效率 (0~1)
+        - cooling_water_inlet_temp: 循环水入口温度 (°C)
+        - condenser_pressure: 凝汽器压力 (MPa) - 兼容前端命名
+        - terminal_temperature_difference: 凝汽器端差 (°C) - 兼容前端命名
+        - cooling_range: 冷却水温升 (°C) - 兼容前端命名
     """
 
     def __init__(
@@ -36,7 +40,7 @@ class Condenser(BaseComponent):
     ):
         default_inlets = [
             {"name": "steam_in", "p": 0.0049, "t": 0.0, "h": 0.0, "m": 0.0},
-            {"name": "cooling_in", "p": 0.1, "t": 20.0, "h": 0.0, "m": 0.0},
+            {"name": "cooling_in", "p": 0.1, "t": 25.0, "h": 0.0, "m": 0.0},
         ]
         default_outlets = [
             {"name": "water_out", "p": 0.0049, "t": 0.0, "h": 0.0, "m": 0.0},
@@ -47,6 +51,10 @@ class Condenser(BaseComponent):
             "delta_t_cw": 10.0,  # 冷却水温升 °C
             "p_cond": 0.0049,  # 凝汽器压力 MPa
             "eta_heat_transfer": 0.98,
+            "cooling_water_inlet_temp": 25.0,  # 循环水入口温度 °C
+            "condenser_pressure": 0.0049,  # 兼容前端命名
+            "terminal_temperature_difference": 5.0,  # 兼容前端命名
+            "cooling_range": 10.0,  # 兼容前端命名
         }
 
         if inlet_ports is None:
@@ -75,9 +83,10 @@ class Condenser(BaseComponent):
         4. 计算冷凝放热量 Q = m_steam * (h_steam_in - h_water_out)
         5. 计算冷却水量 m_cw = Q / (cp_cw * delta_t_cw)
         """
-        p_cond = self.params.get("p_cond", 0.0049)
-        ttd = self.params.get("ttd", 5.0)
-        delta_t_cw = self.params.get("delta_t_cw", 10.0)
+        # 支持新旧参数命名
+        p_cond = self.params.get("p_cond", self.params.get("condenser_pressure", 0.0049))
+        ttd = self.params.get("ttd", self.params.get("terminal_temperature_difference", 5.0))
+        delta_t_cw = self.params.get("delta_t_cw", self.params.get("cooling_range", 10.0))
         eta_ht = self.params.get("eta_heat_transfer", 0.98)
 
         # 获取入口参数

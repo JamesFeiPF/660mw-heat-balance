@@ -7,6 +7,7 @@ from .heater import Heater
 from .pump import Pump
 from .pipe import Pipe
 from .generator import Generator
+from .tee import Tee
 
 __all__ = [
     "BaseComponent",
@@ -17,17 +18,22 @@ __all__ = [
     "Pump",
     "Pipe",
     "Generator",
+    "Tee",
 ]
 
 # 元件类型注册表
 COMPONENT_REGISTRY = {
     "boiler": Boiler,
     "turbine": Turbine,
+    "turbine_hp": Turbine,    # 高压缸
+    "turbine_ip": Turbine,    # 中压缸
+    "turbine_lp": Turbine,    # 低压缸
     "condenser": Condenser,
     "heater": Heater,
     "pump": Pump,
     "pipe": Pipe,
     "generator": Generator,
+    "tee": Tee,               # 三通
 }
 
 

@@ -19,6 +19,9 @@ class Pump(BaseComponent):
         - eta_pump: 泵效率 (0~1)
         - p_out: 出口压力 (MPa)
         - eta_motor: 电机效率 (0~1)
+        - isentropic_efficiency: 等熵效率 (%) - 兼容前端命名
+        - pump_head: 扬程 (m)
+        - outlet_pressure: 出口压力 (MPa) - 兼容前端命名
     """
 
     def __init__(
@@ -38,6 +41,10 @@ class Pump(BaseComponent):
             "eta_pump": 0.85,
             "p_out": 1.0,
             "eta_motor": 0.95,
+            "isentropic_efficiency": 85.0,  # 等熵效率 %
+            "pump_head": 350.0,  # 扬程 m
+            "outlet_pressure": 1.0,  # 兼容前端命名
+            "mass_flow": 485.0,  # 给水流量 t/h - 用于变工况计算
         }
 
         if inlet_ports is None:
@@ -68,8 +75,9 @@ class Pump(BaseComponent):
         6. 出口温度: t_out = ph_to_t(p_out, h_out)
         7. 泵功率: P = m * W_actual
         """
-        eta_pump = self.params.get("eta_pump", 0.85)
-        p_out = self.params.get("p_out", 1.0)
+        # 支持新旧参数命名
+        eta_pump = self.params.get("eta_pump", self.params.get("isentropic_efficiency", 85.0) / 100.0)
+        p_out = self.params.get("p_out", self.params.get("outlet_pressure", 1.0))
         eta_motor = self.params.get("eta_motor", 0.95)
 
         # 获取入口参数

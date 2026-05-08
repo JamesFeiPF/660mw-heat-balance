@@ -130,7 +130,6 @@ async function onSolve() {
     }
   } catch (err: any) {
     // 如果后端不可用，使用模拟数据
-    console.warn('后端不可用，使用模拟计算结果:', err.message)
     const mockResult = generateMockResult()
     store.setSolveResult(mockResult)
     ElMessage.success('计算完成（模拟数据）')

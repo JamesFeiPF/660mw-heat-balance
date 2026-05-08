@@ -236,7 +236,7 @@ async def solve(request: SolveRequest):
         settings = get_settings()
         solver = HeatBalanceSolver(
             model_data=model_data,
-            max_iterations=request.max_iterations or settings.MAX_ITERATIONS,
+            max_outer_iterations=request.max_iterations or settings.MAX_ITERATIONS,
             convergence_tolerance=request.convergence_tolerance or settings.CONVERGENCE_TOLERANCE,
         )
 

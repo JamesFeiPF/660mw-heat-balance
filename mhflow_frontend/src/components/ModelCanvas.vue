@@ -317,7 +317,8 @@ function onKeyDown(e: KeyboardEvent) {
     resetConnecting()
     store.selectComponent(null)
   }
-  if (e.key === 'Delete' || e.key === 'Backspace') {
+  // 需要 Shift + Delete 或 Shift + Backspace 才能删除
+  if ((e.key === 'Delete' || e.key === 'Backspace') && e.shiftKey) {
     if (store.selectedComponentId) {
       store.removeComponent(store.selectedComponentId)
     }

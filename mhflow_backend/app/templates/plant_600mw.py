@@ -279,6 +279,7 @@ def get_600mw_template() -> Dict[str, Any]:
                     "eta_pump": 0.83,
                     "p_out": 29.0,
                     "eta_motor": 0.95,
+                    "mass_flow": 1800,  # 给水流量 t/h（约500 kg/s），用于变工况计算
                 },
             },
 

@@ -38,12 +38,56 @@ export async function saveModel(model: SystemModel, name: string = 'untitled'): 
 }
 
 /** 将前端模型数据转换为后端格式 */
-function convertModelToBackendFormat(model: SystemModel): SystemModel {
+function convertModelToBackendFormat(model: SystemModel): any {
+  console.debug('convertModelToBackendFormat: called with model', model)
+  
+  // 验证model对象
+  if (!model || typeof model !== 'object') {
+    console.error('convertModelToBackendFormat: model is not a valid object', model)
+    throw new Error('无效的模型数据')
+  }
+  
+  // 验证components
+  if (!model.components || !Array.isArray(model.components)) {
+    console.error('convertModelToBackendFormat: components is not a valid array', model.components)
+    throw new Error('无效的元件数据')
+  }
+  console.debug('convertModelToBackendFormat: components length', model.components.length)
+  
+  // 创建前端id到后端name的映射
+  const idToNameMap = new Map<string, string>()
+  
+  // 确保connections是数组 - 处理Vue响应式Proxy对象
+  let modelConnections: any[] = []
+  if (model.connections) {
+    console.debug('convertModelToBackendFormat: connections type', Object.prototype.toString.call(model.connections))
+    console.debug('convertModelToBackendFormat: connections value', model.connections)
+    // 处理多种可能的数组类型
+    if (Array.isArray(model.connections)) {
+      modelConnections = model.connections
+    } else if (typeof model.connections === 'object' && 'length' in model.connections) {
+      // 处理类数组对象或Vue响应式数组
+      modelConnections = Array.from(model.connections as any)
+    } else {
+      console.error('convertModelToBackendFormat: connections is not an array-like object', model.connections)
+    }
+  }
+  console.debug('convertModelToBackendFormat: processed connections length', modelConnections.length)
+  
   // 转换连接格式
-  const convertedConnections = model.connections.map((conn) => {
-    // 能量连接不需要转换
-    if (conn.type === 'power') {
-      return conn
+  const convertedConnections: any[] = []
+  for (let index = 0; index < modelConnections.length; index++) {
+    const conn = modelConnections[index]
+    console.debug('convertModelToBackendFormat: processing connection', index, conn)
+    
+    if (!conn || typeof conn !== 'object') {
+      console.warn('convertModelToBackendFormat: skipping invalid connection', conn)
+      continue
+    }
+    
+    if (!conn.from || !conn.to) {
+      console.warn('convertModelToBackendFormat: connection missing from/to', conn)
+      continue
     }
     
     // 找到源元件和端口
@@ -51,39 +95,72 @@ function convertModelToBackendFormat(model: SystemModel): SystemModel {
     const toComp = model.components.find((c) => c.id === conn.to.componentId)
     
     if (fromComp && toComp) {
+      // 保存映射关系
+      idToNameMap.set(fromComp.id, fromComp.name)
+      idToNameMap.set(toComp.id, toComp.name)
+      
       const fromPort = fromComp.outlet_ports[conn.from.portIndex]
       const toPort = toComp.inlet_ports[conn.to.portIndex]
       
-      return {
+      convertedConnections.push({
         from: `${fromComp.name}.${fromPort?.name || 'out'}`,
         to: `${toComp.name}.${toPort?.name || 'in'}`,
-      }
+        type: conn.type,
+      })
+    } else {
+      console.warn('convertModelToBackendFormat: could not find components for connection', conn)
     }
-    return conn
-  })
+  }
 
-  return {
+  // 保存映射信息供后续使用
+  (window as any).__idToNameMap = idToNameMap
+
+  const result = {
     ...model,
     connections: convertedConnections,
   }
+  
+  console.debug('convertModelToBackendFormat: returning converted model', result)
+  return result
 }
 
 /** 将后端求解结果转换为前端格式 */
 function convertSolveResultFromBackend(rawResult: any): SolveResult {
   const components: ComponentResult[] = []
   
+  // 获取之前保存的映射关系（前端id -> 后端name）
+  const idToNameMap = (window as any).__idToNameMap as Map<string, string> || new Map()
+  
+  // 创建反向映射（后端name -> 前端id）
+  const nameToIdMap = new Map<string, string>()
+  idToNameMap.forEach((name, id) => {
+    nameToIdMap.set(name, id)
+  })
+  
   // 转换元件结果
   const backendComponents = rawResult.components || {}
   for (const [name, compData] of Object.entries(backendComponents)) {
+    const data = compData as {
+      name?: string
+      component_type?: string
+      type?: string
+      inlet_ports?: any[]
+      outlet_ports?: any[]
+      params?: Record<string, any>
+      results?: Record<string, any>
+    }
     // 使用名称作为ID（后端元件名称与前端模板名称一致）
-    const compName = compData.name || name
+    const compName = data.name || name
+    // 尝试获取前端ID，如果找不到则使用后端名称
+    const frontEndId = nameToIdMap.get(compName) || compName
+    
     components.push({
-      id: compName,
+      id: frontEndId,
       name: compName,
-      type: compData.component_type || compData.type || '',
-      inlet_ports: compData.inlet_ports || [],
-      outlet_ports: compData.outlet_ports || [],
-      extra_params: compData.params || compData.results || {},
+      type: data.component_type || data.type || '',
+      inlet_ports: data.inlet_ports || [],
+      outlet_ports: data.outlet_ports || [],
+      extra_params: data.params || data.results || {},
     })
   }
 
@@ -108,9 +185,20 @@ function convertSolveResultFromBackend(rawResult: any): SolveResult {
 
 /** 执行求解计算 */
 export async function solveModel(model: SystemModel): Promise<SolveResult> {
-  const convertedModel = convertModelToBackendFormat(model)
-  const response = await apiClient.post<any>('/solve', { model_data: convertedModel })
-  return convertSolveResultFromBackend(response.data)
+  console.debug('solveModel: called with model', model)
+  
+  try {
+    const convertedModel = convertModelToBackendFormat(model)
+    console.debug('solveModel: converted model ready, sending POST to /api/solve')
+    
+    const response = await apiClient.post<any>('/solve', { model_data: convertedModel })
+    console.debug('solveModel: POST request successful, response:', response.data)
+    
+    return convertSolveResultFromBackend(response.data)
+  } catch (error: any) {
+    console.error('solveModel: error occurred', error)
+    throw error
+  }
 }
 
 /** 获取水蒸汽物性参数 */

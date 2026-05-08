@@ -12,6 +12,7 @@ class Boiler(BaseComponent):
     - 将给水加热为过热蒸汽
     - 计算锅炉热负荷、燃料消耗量
     - 支持一次再热
+    - 支持完整的660MW超超临界锅炉超参数
 
     入口端口:
         - feedwater_in: 给水入口 (p, t, h, m)
@@ -21,12 +22,22 @@ class Boiler(BaseComponent):
         - reheat_out: 热再热蒸汽出口 (p, t, h, m) [可选]
 
     参数:
-        - eta_boiler: 锅炉效率 (0~1)
-        - fuel_lhv: 燃料低位发热量 (kJ/kg)
-        - p_out: 出口蒸汽压力 (MPa)
-        - t_out: 出口蒸汽温度 (°C)
-        - p_reheat_out: 再热蒸汽出口压力 (MPa)
-        - t_reheat_out: 再热蒸汽出口温度 (°C)
+        - main_steam_pressure: 主蒸汽压力 (MPa)
+        - main_steam_temperature: 主蒸汽温度 (°C)
+        - reheat_temperature: 再热蒸汽温度 (°C)
+        - boiler_efficiency: 锅炉效率 (%)
+        - feedwater_temperature: 给水温度 (°C)
+        - rated_evaporation: 锅炉额定蒸发量 (t/h)
+        - reheat_pressure_drop: 再热蒸汽压降 (MPa)
+        - exhaust_gas_temperature: 排烟温度 (°C)
+        - excess_air_ratio: 过量空气系数
+        - fly_ash_carbon: 飞灰含碳量 (%)
+        - slag_carbon: 炉渣含碳量 (%)
+        - blowdown_rate: 排污率 (%)
+        - heat_loss: 散热损失 (%)
+        - fuel_lower_heating_value: 燃料低位发热量 (kJ/kg)
+        - fuel_moisture: 燃料收到基水分 (%)
+        - fuel_ash: 燃料收到基灰分 (%)
     """
 
     def __init__(
@@ -45,12 +56,22 @@ class Boiler(BaseComponent):
             {"name": "reheat_out", "p": 0.0, "t": 0.0, "h": 0.0, "m": 0.0},
         ]
         default_params = {
-            "eta_boiler": 0.93,
-            "fuel_lhv": 21000.0,  # kJ/kg (标准煤)
-            "p_out": 25.0,  # MPa
-            "t_out": 600.0,  # °C
-            "p_reheat_out": 4.5,  # MPa
-            "t_reheat_out": 600.0,  # °C
+            "main_steam_pressure": 28.0,  # MPa
+            "main_steam_temperature": 600.0,  # °C
+            "reheat_temperature": 610.0,  # °C
+            "boiler_efficiency": 95.0,  # %
+            "feedwater_temperature": 299.0,  # °C
+            "rated_evaporation": 2000.0,  # t/h
+            "reheat_pressure_drop": 0.3,  # MPa
+            "exhaust_gas_temperature": 120.0,  # °C
+            "excess_air_ratio": 1.15,
+            "fly_ash_carbon": 1.5,  # %
+            "slag_carbon": 3.0,  # %
+            "blowdown_rate": 1.0,  # %
+            "heat_loss": 0.3,  # %
+            "fuel_lower_heating_value": 21000.0,  # kJ/kg
+            "fuel_moisture": 15.0,  # %
+            "fuel_ash": 25.0,  # %
         }
 
         if inlet_ports is None:
@@ -78,12 +99,15 @@ class Boiler(BaseComponent):
         3. 锅炉热负荷 Q = m * (h_out - h_in) + m_rh * (h_rh_out - h_rh_in)
         4. 燃料消耗量 B = Q / (eta_boiler * fuel_lhv)
         """
-        eta_boiler = self.params.get("eta_boiler", 0.93)
-        fuel_lhv = self.params.get("fuel_lhv", 21000.0)
-        p_out = self.params.get("p_out", 25.0)
-        t_out = self.params.get("t_out", 600.0)
-        p_rh_out = self.params.get("p_reheat_out", 4.5)
-        t_rh_out = self.params.get("t_reheat_out", 600.0)
+        # 获取参数（支持新旧参数命名）
+        p_out = self.params.get("main_steam_pressure", self.params.get("p_out", 28.0))
+        t_out = self.params.get("main_steam_temperature", self.params.get("t_out", 600.0))
+        t_rh_out = self.params.get("reheat_temperature", self.params.get("t_reheat_out", 610.0))
+        eta_boiler = self.params.get("boiler_efficiency", self.params.get("eta_boiler", 95.0)) / 100.0
+        fuel_lhv = self.params.get("fuel_lower_heating_value", self.params.get("fuel_lhv", 21000.0))
+        
+        # 再热出口压力 = 再热入口压力 - 压降
+        reheat_pressure_drop = self.params.get("reheat_pressure_drop", 0.3)
 
         # 获取入口参数
         fw_in = self.get_inlet("feedwater_in")
@@ -106,9 +130,13 @@ class Boiler(BaseComponent):
         q_reheat = 0.0
         h_rh_out = 0.0
         m_rh = 0.0
+        p_rh_out = 0.0
+        
         if rh_in is not None and rh_in.get("m", 0.0) > 0:
             m_rh = rh_in.get("m", 0.0)
             h_rh_in = rh_in.get("h", 0.0)
+            p_rh_in = rh_in.get("p", 4.5)
+            p_rh_out = p_rh_in - reheat_pressure_drop
             h_rh_out = pt_to_h(p_rh_out, t_rh_out)
             q_reheat = m_rh * (h_rh_out - h_rh_in)
 
@@ -118,7 +146,6 @@ class Boiler(BaseComponent):
         # 燃料消耗量
         b_fuel = q_total / (eta_boiler * fuel_lhv) if eta_boiler > 0 and fuel_lhv > 0 else 0.0
 
-        # 标准煤耗率 (g/kWh) - 暂时设为0，等发电机计算后更新
         # 计算结果
         self.results = {
             "q_main": q_main,  # 主蒸汽吸热量 (kW)
@@ -126,7 +153,8 @@ class Boiler(BaseComponent):
             "q_total": q_total,  # 总吸热量 (kW)
             "b_fuel": b_fuel,  # 燃料消耗量 (kg/s)
             "b_fuel_hour": b_fuel * 3600,  # 燃料消耗量 (kg/h)
-            "eta_boiler": eta_boiler,
+            "eta_boiler": eta_boiler * 100,  # 转换为百分比
+            "fuel_lhv": fuel_lhv,
         }
 
         # 更新出口端口

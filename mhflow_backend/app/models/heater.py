@@ -41,6 +41,12 @@ class Heater(BaseComponent):
         - eta: 加热器效率 (0~1)
         - p_heater: 加热器压力 (MPa)
         - p_water_out: 出口水压力 (MPa)
+        - hp_ttd: 高加上端差 (°C)
+        - hp_dca: 高加下端差/过冷度 (°C)
+        - lp_ttd: 低加上端差 (°C)
+        - lp_dca: 低加下端差/过冷度 (°C)
+        - deaerator_pressure: 除氧器工作压力 (MPa)
+        - heat_loss_rate: 加热器散热损失 (%)
     """
 
     def __init__(
@@ -66,6 +72,12 @@ class Heater(BaseComponent):
             "eta": 0.99,
             "p_heater": 1.0,  # 加热器压力 MPa
             "p_water_out": 1.0,
+            "hp_ttd": -1.7,  # 高加上端差 °C
+            "hp_dca": 5.0,  # 高加下端差/过冷度 °C
+            "lp_ttd": 2.8,  # 低加上端差 °C
+            "lp_dca": 5.0,  # 低加下端差/过冷度 °C
+            "deaerator_pressure": 0.7,  # 除氧器工作压力 MPa
+            "heat_loss_rate": 0.2,  # 加热器散热损失 %
         }
 
         if inlet_ports is None:
@@ -90,11 +102,25 @@ class Heater(BaseComponent):
         根据加热器类型执行不同的热平衡计算。
         """
         heater_type = self.params.get("heater_type", "HP")
-        ttd = self.params.get("ttd", 3.0)
-        dca = self.params.get("dca", 5.0)
         eta = self.params.get("eta", 0.99)
         p_heater = self.params.get("p_heater", 1.0)
         p_water_out = self.params.get("p_water_out", p_heater)
+        
+        # 根据加热器类型选择对应的端差和过冷度
+        if heater_type == "HP":
+            ttd = self.params.get("ttd", self.params.get("hp_ttd", -1.7))
+            dca = self.params.get("dca", self.params.get("hp_dca", 5.0))
+        elif heater_type == "LP":
+            ttd = self.params.get("ttd", self.params.get("lp_ttd", 2.8))
+            dca = self.params.get("dca", self.params.get("lp_dca", 5.0))
+        elif heater_type == "DA":
+            ttd = 0.0
+            dca = 0.0
+            # 使用除氧器工作压力
+            p_heater = self.params.get("deaerator_pressure", p_heater)
+        else:
+            ttd = self.params.get("ttd", 3.0)
+            dca = self.params.get("dca", 5.0)
 
         # 获取入口参数
         water_in = self.get_inlet("water_in")

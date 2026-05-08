@@ -9,7 +9,9 @@ const PORT_HIT_RADIUS = 10
 /** 元件类型颜色映射 */
 const TYPE_COLORS: Record<string, string> = {
   boiler: '#e74c3c',
-  turbine: '#3498db',
+  turbine_hp: '#3498db',
+  turbine_ip: '#2980b9',
+  turbine_lp: '#1a5276',
   condenser: '#1abc9c',
   heater: '#f39c12',
   pump: '#9b59b6',
@@ -20,7 +22,9 @@ const TYPE_COLORS: Record<string, string> = {
 /** 元件类型中文名映射 */
 const TYPE_LABELS: Record<string, string> = {
   boiler: '锅炉',
-  turbine: '汽轮机',
+  turbine_hp: '高压缸',
+  turbine_ip: '中压缸',
+  turbine_lp: '低压缸',
   condenser: '凝汽器',
   heater: '加热器',
   pump: '水泵',
@@ -31,7 +35,9 @@ const TYPE_LABELS: Record<string, string> = {
 /** 元件类型图标符号 */
 const TYPE_ICONS: Record<string, string> = {
   boiler: 'B',
-  turbine: 'T',
+  turbine_hp: 'HP',
+  turbine_ip: 'IP',
+  turbine_lp: 'LP',
   condenser: 'C',
   heater: 'H',
   pump: 'P',

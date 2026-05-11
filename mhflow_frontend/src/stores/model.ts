@@ -28,7 +28,7 @@ const COMPONENT_CONFIGS: Record<string, ComponentTypeConfig> = {
       excess_air_ratio: 1.15,
       fly_ash_carbon: 1.5,
       slag_carbon: 3.0,
-      blowdown_rate: 1.0,
+      blowdown_rate: 0.0,
       heat_loss: 0.3,
       fuel_lower_heating_value: 21000,
       fuel_moisture: 15,
@@ -46,7 +46,7 @@ const COMPONENT_CONFIGS: Record<string, ComponentTypeConfig> = {
       { key: 'excess_air_ratio', label: '过量空气系数', unit: '-', default: 1.15, min: 1.0, max: 1.5, step: 0.01, description: '炉膛出口过量空气系数' },
       { key: 'fly_ash_carbon', label: '飞灰含碳量', unit: '%', default: 1.5, min: 0, max: 10, step: 0.1, description: '影响机械不完全燃烧损失' },
       { key: 'slag_carbon', label: '炉渣含碳量', unit: '%', default: 3.0, min: 0, max: 10, step: 0.1, description: '影响机械不完全燃烧损失' },
-      { key: 'blowdown_rate', label: '排污率', unit: '%', default: 1.0, min: 0, max: 5, step: 0.1, description: '连续排污比例' },
+      { key: 'blowdown_rate', label: '排污率', unit: '%', default: 0.0, min: 0, max: 5, step: 0.1, description: '连续排污比例' },
       { key: 'heat_loss', label: '散热损失', unit: '%', default: 0.3, min: 0, max: 2, step: 0.05, description: '锅炉本体及烟道散热损失' },
       { key: 'fuel_lower_heating_value', label: '燃料低位发热量', unit: 'kJ/kg', default: 21000, min: 10000, max: 30000, step: 100, required: true, description: '入炉煤低位发热量' },
       { key: 'fuel_moisture', label: '燃料收到基水分', unit: '%', default: 15, min: 0, max: 50, step: 1, description: '煤质参数' },
@@ -72,19 +72,19 @@ const COMPONENT_CONFIGS: Record<string, ComponentTypeConfig> = {
       stage: '0',
       mechanical_efficiency: 0.995,
       rated_power: 660,
-      exhaust_pressure: 4.9,
+      exhaust_pressure: 11,
       shaft_seal_leakage_rate: 1.0,
       feedwater_pump_turbine_efficiency: 80,
-      hp_efficiency: 88,
-      ip_efficiency: 92,
-      lp_efficiency: 89,
+      hp_efficiency: 87.9,
+      ip_efficiency: 88.3,
+      lp_efficiency: 87,
     },
     paramDefs: [
       { key: 'rated_power', label: '汽轮机额定功率', unit: 'MW', default: 660, min: 100, max: 1000, step: 10, required: true, description: '机组额定功率' },
-      { key: 'exhaust_pressure', label: '汽轮机排汽压力', unit: 'kPa', default: 4.9, min: 2, max: 20, step: 0.1, required: true, description: '凝汽器背压' },
-      { key: 'hp_efficiency', label: '高压缸效率', unit: '%', default: 88, min: 70, max: 98, step: 0.5, required: true, description: '高压缸相对内效率' },
-      { key: 'ip_efficiency', label: '中压缸效率', unit: '%', default: 92, min: 70, max: 98, step: 0.5, required: true, description: '中压缸相对内效率' },
-      { key: 'lp_efficiency', label: '低压缸效率', unit: '%', default: 89, min: 70, max: 98, step: 0.5, required: true, description: '低压缸相对内效率' },
+      { key: 'exhaust_pressure', label: '汽轮机排汽压力', unit: 'kPa', default: 11, min: 2, max: 20, step: 0.1, required: true, description: '凝汽器背压' },
+      { key: 'hp_efficiency', label: '高压缸效率', unit: '%', default: 87.9, min: 70, max: 98, step: 0.5, required: true, description: '高压缸相对内效率' },
+      { key: 'ip_efficiency', label: '中压缸效率', unit: '%', default: 88.3, min: 70, max: 98, step: 0.5, required: true, description: '中压缸相对内效率' },
+      { key: 'lp_efficiency', label: '低压缸效率', unit: '%', default: 87, min: 70, max: 98, step: 0.5, required: true, description: '低压缸相对内效率' },
       { key: 'eta_isen', label: '等熵效率', unit: '', default: 0.88, min: 0.7, max: 0.99, step: 0.005, description: '相对内效率' },
       { key: 'p_out', label: '排汽压力', unit: 'MPa', default: 1.0, min: 0.002, max: 20, step: 0.01 },
       { key: 'mechanical_efficiency', label: '机械效率', unit: '', default: 0.995, min: 0.95, max: 0.999, step: 0.001 },
@@ -106,22 +106,22 @@ const COMPONENT_CONFIGS: Record<string, ComponentTypeConfig> = {
     color: '#3498db',
     icon: 'turbine',
     defaultParams: {
-      eta_isen: 0.875,
-      p_out: 4.2,
+      eta_isen: 0.879,
+      p_out: 5.78,
       stage: 'HP',
       n_sections: 5,
       mechanical_efficiency: 0.995,
       extraction_points: [
-        { name: 'ext_hp1', p: 7.2, m_frac: 0.082, h_drop_ratio: 0.25 },
-        { name: 'ext_hp2', p: 5.2, m_frac: 0.078, h_drop_ratio: 0.25 },
-        { name: 'ext_hp3', p: 4.5, m_frac: 0.035, h_drop_ratio: 0.2 },
-        { name: 'ext_hp4', p: 4.3, m_frac: 0.0, h_drop_ratio: 0.15 },
-        { name: 'ext_hp5', p: 4.2, m_frac: 0.0, h_drop_ratio: 0.15 },
+        { name: 'ext_hp1', p: 7.741, m_frac: 0.0645, h_drop_ratio: 0.25 },
+        { name: 'ext_hp2', p: 5.893, m_frac: 0.0386, h_drop_ratio: 0.25 },
+        { name: 'ext_hp3', p: 5.78, m_frac: 0.145, h_drop_ratio: 0.2 },
+        { name: 'ext_hp4', p: 5.78, m_frac: 0.0, h_drop_ratio: 0.15 },
+        { name: 'ext_hp5', p: 5.78, m_frac: 0.0, h_drop_ratio: 0.15 },
       ],
     },
     paramDefs: [
-      { key: 'eta_isen', label: '等熵效率', unit: '', default: 0.875, min: 0.7, max: 0.99, step: 0.005 },
-      { key: 'p_out', label: '排汽压力', unit: 'MPa', default: 4.2, min: 1, max: 10, step: 0.1 },
+      { key: 'eta_isen', label: '等熵效率', unit: '', default: 0.879, min: 0.7, max: 0.99, step: 0.005 },
+      { key: 'p_out', label: '排汽压力', unit: 'MPa', default: 5.78, min: 1, max: 10, step: 0.1 },
       { key: 'mechanical_efficiency', label: '机械效率', unit: '', default: 0.995, min: 0.95, max: 0.999, step: 0.001 },
     ],
     defaultInletPorts: [
@@ -140,18 +140,18 @@ const COMPONENT_CONFIGS: Record<string, ComponentTypeConfig> = {
     color: '#3498db',
     icon: 'turbine',
     defaultParams: {
-      eta_isen: 0.90,
+      eta_isen: 0.883,
       p_out: 1.0,
       stage: 'IP',
       n_sections: 2,
       mechanical_efficiency: 0.995,
       extraction_points: [
-        { name: 'ext_ip1', p: 2.5, m_frac: 0.060, h_drop_ratio: 0.5 },
-        { name: 'ext_ip2', p: 1.5, m_frac: 0.035, h_drop_ratio: 0.5 },
+        { name: 'ext_ip1', p: 2.936, m_frac: 0.0297, h_drop_ratio: 0.5 },
+        { name: 'ext_ip2', p: 1.239, m_frac: 0.057, h_drop_ratio: 0.5 },
       ],
     },
     paramDefs: [
-      { key: 'eta_isen', label: '等熵效率', unit: '', default: 0.90, min: 0.7, max: 0.99, step: 0.005 },
+      { key: 'eta_isen', label: '等熵效率', unit: '', default: 0.883, min: 0.7, max: 0.99, step: 0.005 },
       { key: 'p_out', label: '排汽压力', unit: 'MPa', default: 1.0, min: 0.1, max: 5, step: 0.1 },
       { key: 'mechanical_efficiency', label: '机械效率', unit: '', default: 0.995, min: 0.95, max: 0.999, step: 0.001 },
     ],
@@ -170,23 +170,23 @@ const COMPONENT_CONFIGS: Record<string, ComponentTypeConfig> = {
     color: '#3498db',
     icon: 'turbine',
     defaultParams: {
-      eta_isen: 0.88,
-      p_out: 0.0049,
+      eta_isen: 0.87,
+      p_out: 0.011,
       stage: 'LP',
       n_sections: 6,
       mechanical_efficiency: 0.995,
       extraction_points: [
-        { name: 'ext_lp1', p: 0.6, m_frac: 0.030, h_drop_ratio: 0.15 },
-        { name: 'ext_lp2', p: 0.25, m_frac: 0.025, h_drop_ratio: 0.15 },
-        { name: 'ext_lp3', p: 0.08, m_frac: 0.020, h_drop_ratio: 0.15 },
-        { name: 'ext_lp4', p: 0.03, m_frac: 0.015, h_drop_ratio: 0.15 },
-        { name: 'ext_lp5', p: 0.015, m_frac: 0.010, h_drop_ratio: 0.2 },
-        { name: 'ext_lp6', p: 0.008, m_frac: 0.005, h_drop_ratio: 0.2 },
+        { name: 'ext_lp1', p: 0.523, m_frac: 0.030, h_drop_ratio: 0.15 },
+        { name: 'ext_lp2', p: 0.26, m_frac: 0.025, h_drop_ratio: 0.15 },
+        { name: 'ext_lp3', p: 0.11, m_frac: 0.020, h_drop_ratio: 0.15 },
+        { name: 'ext_lp4', p: 0.011, m_frac: 0.0, h_drop_ratio: 0.15 },
+        { name: 'ext_lp5', p: 0.011, m_frac: 0.0, h_drop_ratio: 0.2 },
+        { name: 'ext_lp6', p: 0.011, m_frac: 0.0, h_drop_ratio: 0.2 },
       ],
     },
     paramDefs: [
-      { key: 'eta_isen', label: '等熵效率', unit: '', default: 0.88, min: 0.7, max: 0.99, step: 0.005 },
-      { key: 'p_out', label: '排汽压力', unit: 'MPa', default: 0.0049, min: 0.002, max: 0.1, step: 0.001 },
+      { key: 'eta_isen', label: '等熵效率', unit: '', default: 0.87, min: 0.7, max: 0.99, step: 0.005 },
+      { key: 'p_out', label: '排汽压力', unit: 'MPa', default: 0.011, min: 0.002, max: 0.1, step: 0.001 },
       { key: 'mechanical_efficiency', label: '机械效率', unit: '', default: 0.995, min: 0.95, max: 0.999, step: 0.001 },
     ],
     defaultInletPorts: [
@@ -208,13 +208,13 @@ const COMPONENT_CONFIGS: Record<string, ComponentTypeConfig> = {
     color: '#1abc9c',
     icon: 'condenser',
     defaultParams: {
-      condenser_pressure: 0.0049,
+      condenser_pressure: 0.011,
       cooling_water_inlet_temp: 25,
       terminal_temperature_difference: 5.0,
       cooling_range: 10.0,
     },
     paramDefs: [
-      { key: 'condenser_pressure', label: '凝汽器压力', unit: 'MPa', default: 0.0049, min: 0.002, max: 0.02, step: 0.001, required: true, description: '凝汽器背压' },
+      { key: 'condenser_pressure', label: '凝汽器压力', unit: 'MPa', default: 0.011, min: 0.002, max: 0.02, step: 0.001, required: true, description: '凝汽器背压' },
       { key: 'cooling_water_inlet_temp', label: '循环水入口温度', unit: '°C', default: 25, min: 5, max: 35, step: 1, required: true, description: '冷却塔出口水温' },
       { key: 'terminal_temperature_difference', label: '凝汽器端差', unit: '°C', default: 5.0, min: 1, max: 15, step: 0.5, description: '凝汽器传热端差' },
       { key: 'cooling_range', label: '冷却水温升', unit: '°C', default: 10.0, min: 3, max: 20, step: 0.5, description: '循环水温升' },
@@ -234,20 +234,22 @@ const COMPONENT_CONFIGS: Record<string, ComponentTypeConfig> = {
     color: '#f39c12',
     icon: 'heater',
     defaultParams: {
-      extraction_pressure: 1.0,
-      terminal_temperature_difference: 3,
-      drain_cooler_approach: 5,
-      type: 1,
+      p_heater: 1.0,
+      ttd: 3.0,
+      dca: 5.0,
+      heater_type: 'LP',
+      eta: 0.99,
+      p_water_out: 1.5,
       heat_loss_rate: 0.2,
-      deaerator_pressure: 0.7,
     },
     paramDefs: [
-      { key: 'extraction_pressure', label: '抽汽压力', unit: 'MPa', default: 1.0, min: 0.02, max: 10, step: 0.01 },
-      { key: 'terminal_temperature_difference', label: '端差', unit: '°C', default: 3, min: 0, max: 10, step: 0.5 },
-      { key: 'drain_cooler_approach', label: '疏水冷却端差', unit: '°C', default: 5, min: 0, max: 15, step: 0.5 },
-      { key: 'type', label: '类型(0=混合,1=表面)', unit: '', default: 1, min: 0, max: 1, step: 1 },
+      { key: 'heater_type', label: '加热器类型', unit: '', default: 'LP', options: [{ label: '高压加热器(HP)', value: 'HP' }, { label: '低压加热器(LP)', value: 'LP' }, { label: '除氧器(DA)', value: 'DA' }] },
+      { key: 'p_heater', label: '抽汽压力', unit: 'MPa', default: 1.0, min: 0.02, max: 10, step: 0.01 },
+      { key: 'ttd', label: '端差', unit: '°C', default: 3.0, min: 0, max: 10, step: 0.5 },
+      { key: 'dca', label: '疏水冷却端差', unit: '°C', default: 5.0, min: 0, max: 15, step: 0.5 },
+      { key: 'eta', label: '效率', unit: '', default: 0.99, min: 0.8, max: 1.0, step: 0.01 },
+      { key: 'p_water_out', label: '出水压力', unit: 'MPa', default: 1.5, min: 0.1, max: 30, step: 0.1 },
       { key: 'heat_loss_rate', label: '散热损失', unit: '%', default: 0.2, min: 0, max: 2, step: 0.05, description: '单台加热器散热损失' },
-      { key: 'deaerator_pressure', label: '除氧器工作压力', unit: 'MPa(a)', default: 0.7, min: 0.1, max: 2, step: 0.05, description: '除氧器运行压力' },
     ],
     defaultInletPorts: [
       { id: 'in1', name: '抽汽进口', type: 'inlet', p: 0, t: 0, h: 0, m: 0, s: 0 },
@@ -333,13 +335,13 @@ const COMPONENT_CONFIGS: Record<string, ComponentTypeConfig> = {
     icon: 'generator',
     defaultParams: {
       rated_power: 660,
-      efficiency: 98.5,
+      efficiency: 99.5,
       power_factor: 0.85,
       station_service_power_rate: 6.0,
     },
     paramDefs: [
       { key: 'rated_power', label: '额定功率', unit: 'MW', default: 660, min: 50, max: 1200, step: 10, required: true },
-      { key: 'efficiency', label: '效率', unit: '%', default: 98.5, min: 95, max: 99.9, step: 0.1, required: true },
+      { key: 'efficiency', label: '效率', unit: '%', default: 99.5, min: 95, max: 99.9, step: 0.1, required: true },
       { key: 'power_factor', label: '功率因数', unit: '', default: 0.85, min: 0.8, max: 1.0, step: 0.01 },
       { key: 'station_service_power_rate', label: '厂用电率', unit: '%', default: 6.0, min: 3, max: 10, step: 0.1, description: '机组厂用电率' },
     ],
@@ -382,16 +384,39 @@ export const useModelStore = defineStore('model', () => {
   const connectionCount = computed(() => connections.value.length)
 
   // 方法
-  function addComponent(type: ComponentType, x: number, y: number): Component {
+  // 组件默认尺寸（用于重叠检测）
+  const COMPONENT_WIDTH = 140
+  const COMPONENT_HEIGHT = 80
+
+  function isOverlapping(x: number, y: number, excludeId?: string): boolean {
+    return components.value.some((c) => {
+      if (excludeId && c.id === excludeId) return false
+      return (
+        Math.abs(c.x - x) < COMPONENT_WIDTH &&
+        Math.abs(c.y - y) < COMPONENT_HEIGHT
+      )
+    })
+  }
+
+  function addComponent(type: ComponentType, x: number, y: number): Component | null {
     const config = COMPONENT_CONFIGS[type]
     if (!config) throw new Error(`Unknown component type: ${type}`)
+
+    // 检测重叠，自动偏移
+    let finalX = x
+    let finalY = y
+    let attempts = 0
+    while (isOverlapping(finalX, finalY) && attempts < 20) {
+      finalX += COMPONENT_WIDTH + 10
+      attempts++
+    }
 
     const comp: Component = {
       id: generateId(type),
       type,
       name: `${config.label}_${components.value.filter((c) => c.type === type).length + 1}`,
-      x,
-      y,
+      x: finalX,
+      y: finalY,
       params: { ...config.defaultParams },
       inlet_ports: config.defaultInletPorts.map((p) => ({ ...p, id: `${generateId('port')}` })),
       outlet_ports: config.defaultOutletPorts.map((p) => ({ ...p, id: `${generateId('port')}` })),
@@ -418,7 +443,7 @@ export const useModelStore = defineStore('model', () => {
     }
   }
 
-  function updateComponentParam(id: string, key: string, value: number) {
+  function updateComponentParam(id: string, key: string, value: number | string) {
     const comp = components.value.find((c) => c.id === id)
     if (comp) {
       comp.params[key] = value
@@ -427,6 +452,17 @@ export const useModelStore = defineStore('model', () => {
 
   function selectComponent(id: string | null) {
     selectedComponentId.value = id
+  }
+
+  function getPortName(componentId: string, portIndex: number, portType: 'inlet' | 'outlet'): string {
+    const comp = components.value.find((c) => c.id === componentId)
+    if (!comp) return ''
+    const ports = portType === 'inlet' ? comp.inlet_ports : comp.outlet_ports
+    return ports[portIndex]?.name || ''
+  }
+
+  function isPowerPort(portName: string): boolean {
+    return portName.toLowerCase().includes('power')
   }
 
   function addConnection(
@@ -461,6 +497,16 @@ export const useModelStore = defineStore('model', () => {
         c.to.componentId === toComponentId && c.to.portIndex === toPortIndex
     )
     if (toUsed) return null
+
+    // 验证：端口类型兼容性（功率端口只能连功率端口）
+    const fromPortName = getPortName(fromComponentId, fromPortIndex, 'outlet')
+    const toPortName = getPortName(toComponentId, toPortIndex, 'inlet')
+    const fromIsPower = isPowerPort(fromPortName)
+    const toIsPower = isPowerPort(toPortName)
+    if (fromIsPower !== toIsPower) {
+      console.warn(`端口类型不匹配: ${fromPortName} -> ${toPortName}`)
+      return null
+    }
 
     const conn: Connection = {
       id: generateId('conn'),
@@ -530,40 +576,40 @@ export const useModelStore = defineStore('model', () => {
       name: '锅炉',
       x: 50,
       y: 200,
-      params: { main_steam_pressure: 24.2, main_steam_temperature: 566, reheat_temperature: 566, boiler_efficiency: 93.5, feedwater_temperature: 278 },
+      params: { main_steam_pressure: 28.0, main_steam_temperature: 600, reheat_temperature: 610, boiler_efficiency: 95.0, blowdown_rate: 0.0, feedwater_temperature: 295 },
       inlet_ports: [
-        { id: 'tpl_b_in1', name: 'feedwater_in', type: 'inlet' as const, p: 27.5, t: 278, h: 1215, m: 485, s: 3.12 },
-        { id: 'tpl_b_in2', name: 'reheat_in', type: 'inlet' as const, p: 4.2, t: 310, h: 3040, m: 410, s: 6.58 },
+        { id: 'tpl_b_in1', name: 'feedwater_in', type: 'inlet' as const, p: 28.0, t: 295, h: 1300, m: 500, s: 3.12 },
+        { id: 'tpl_b_in2', name: 'reheat_in', type: 'inlet' as const, p: 5.78, t: 354, h: 3060, m: 391, s: 6.58 },
       ],
       outlet_ports: [
-        { id: 'tpl_b_out1', name: 'steam_out', type: 'outlet' as const, p: 24.2, t: 566, h: 3395, m: 485, s: 6.36 },
-        { id: 'tpl_b_out2', name: 'reheat_out', type: 'outlet' as const, p: 4.2, t: 566, h: 3595, m: 410, s: 7.42 },
+        { id: 'tpl_b_out1', name: 'steam_out', type: 'outlet' as const, p: 28.0, t: 600, h: 3466, m: 500, s: 6.36 },
+        { id: 'tpl_b_out2', name: 'reheat_out', type: 'outlet' as const, p: 5.48, t: 610, h: 3686, m: 391, s: 7.42 },
       ],
     }
 
     // ========== 高压缸段 - 5段级组(2,7,11,13,16) ==========
     const hpStages = [
-      { id: 'tpl_hp1', name: 'HP_Stage_2', x: 180, p_out: 7.2, m_frac: 0.082, next: 'tpl_hp2' },
-      { id: 'tpl_hp2', name: 'HP_Stage_7', x: 300, p_out: 5.2, m_frac: 0.078, next: 'tpl_hp3' },
-      { id: 'tpl_hp3', name: 'HP_Stage_11', x: 420, p_out: 4.5, m_frac: 0.035, next: 'tpl_hp4' },
-      { id: 'tpl_hp4', name: 'HP_Stage_13', x: 540, p_out: 4.3, m_frac: 0.0, next: 'tpl_hp5' },
-      { id: 'tpl_hp5', name: 'HP_Stage_16', x: 660, p_out: 4.2, m_frac: 0.0, next: null },
+      { id: 'tpl_hp1', name: 'HP_Stage_2', x: 180, p_out: 7.741, m_frac: 0.0645, next: 'tpl_hp2' },
+      { id: 'tpl_hp2', name: 'HP_Stage_7', x: 300, p_out: 5.893, m_frac: 0.0386, next: 'tpl_hp3' },
+      { id: 'tpl_hp3', name: 'HP_Stage_11', x: 420, p_out: 5.78, m_frac: 0.145, next: 'tpl_hp4' },
+      { id: 'tpl_hp4', name: 'HP_Stage_13', x: 540, p_out: 5.78, m_frac: 0.0, next: 'tpl_hp5' },
+      { id: 'tpl_hp5', name: 'HP_Stage_16', x: 660, p_out: 5.78, m_frac: 0.0, next: null },
     ]
 
     // ========== 中压缸段 - 2段级组(19,20) ==========
     const ipStages = [
-      { id: 'tpl_ip1', name: 'IP_Stage_19', x: 820, p_out: 2.5, m_frac: 0.060, next: 'tpl_ip2' },
-      { id: 'tpl_ip2', name: 'IP_Stage_20', x: 940, p_out: 1.0, m_frac: 0.035, next: null },
+      { id: 'tpl_ip1', name: 'IP_Stage_19', x: 820, p_out: 2.936, m_frac: 0.0297, next: 'tpl_ip2' },
+      { id: 'tpl_ip2', name: 'IP_Stage_20', x: 940, p_out: 1.0, m_frac: 0.057, next: null },
     ]
 
     // ========== 低压缸段 - 6段级组(29,30,36,37,42,43) ==========
     const lpStages = [
-      { id: 'tpl_lp1', name: 'LP_Stage_29', x: 1100, p_out: 0.6, m_frac: 0.030, next: 'tpl_lp2' },
-      { id: 'tpl_lp2', name: 'LP_Stage_30', x: 1220, p_out: 0.25, m_frac: 0.025, next: 'tpl_lp3' },
-      { id: 'tpl_lp3', name: 'LP_Stage_36', x: 1340, p_out: 0.08, m_frac: 0.020, next: 'tpl_lp4' },
-      { id: 'tpl_lp4', name: 'LP_Stage_37', x: 1460, p_out: 0.03, m_frac: 0.015, next: 'tpl_lp5' },
-      { id: 'tpl_lp5', name: 'LP_Stage_42', x: 1580, p_out: 0.015, m_frac: 0.010, next: 'tpl_lp6' },
-      { id: 'tpl_lp6', name: 'LP_Stage_43', x: 1700, p_out: 0.0049, m_frac: 0.0, next: null },
+      { id: 'tpl_lp1', name: 'LP_Stage_29', x: 1100, p_out: 0.523, m_frac: 0.030, next: 'tpl_lp2' },
+      { id: 'tpl_lp2', name: 'LP_Stage_30', x: 1220, p_out: 0.26, m_frac: 0.025, next: 'tpl_lp3' },
+      { id: 'tpl_lp3', name: 'LP_Stage_36', x: 1340, p_out: 0.11, m_frac: 0.020, next: 'tpl_lp4' },
+      { id: 'tpl_lp4', name: 'LP_Stage_37', x: 1460, p_out: 0.011, m_frac: 0.0, next: 'tpl_lp5' },
+      { id: 'tpl_lp5', name: 'LP_Stage_42', x: 1580, p_out: 0.011, m_frac: 0.0, next: 'tpl_lp6' },
+      { id: 'tpl_lp6', name: 'LP_Stage_43', x: 1700, p_out: 0.011, m_frac: 0.0, next: null },
     ]
 
     // 创建汽轮机缸体组件
@@ -573,8 +619,8 @@ export const useModelStore = defineStore('model', () => {
 
     // 创建高压缸
     let prevM = 485
-    let prevP = 24.2
-    let prevH = 3395
+    let prevP = 28.0
+    let prevH = 3466
     hpStages.forEach((stage, idx) => {
       const turbine: Component = {
         id: stage.id,
@@ -582,9 +628,9 @@ export const useModelStore = defineStore('model', () => {
         name: stage.name,
         x: stage.x,
         y: 180,
-        params: { eta_isen: 0.875, p_out: stage.p_out, stage: 'HP', mechanical_efficiency: 0.995 },
+        params: { eta_isen: 0.879, p_out: stage.p_out, stage: 'HP', mechanical_efficiency: 0.995 },
         inlet_ports: [
-          { id: `${stage.id}_in1`, name: 'steam_in', type: 'inlet', p: prevP, t: idx === 0 ? 566 : 320 + idx * 10, h: prevH, m: prevM, s: 6.36 + idx * 0.05 },
+          { id: `${stage.id}_in1`, name: 'steam_in', type: 'inlet', p: prevP, t: idx === 0 ? 600 : 320 + idx * 10, h: prevH, m: prevM, s: 6.36 + idx * 0.05 },
           { id: `${stage.id}_in2`, name: 'power_in', type: 'inlet', p: 0, t: 0, h: 0, m: 0, s: 0, w: 0 },
         ],
         outlet_ports: [
@@ -630,9 +676,9 @@ export const useModelStore = defineStore('model', () => {
     connections.push({ id: 'conn_hp5_reheat', from: { componentId: 'tpl_hp5', portIndex: 0 }, to: { componentId: 'tpl_boiler', portIndex: 1 } })
 
     // 创建中压缸
-    prevM = 410
-    prevP = 4.2
-    prevH = 3595
+    prevM = 391
+    prevP = 5.48
+    prevH = 3686
     ipStages.forEach((stage, idx) => {
       const turbine: Component = {
         id: stage.id,
@@ -640,9 +686,9 @@ export const useModelStore = defineStore('model', () => {
         name: stage.name,
         x: stage.x,
         y: 180,
-        params: { eta_isen: 0.90, p_out: stage.p_out, stage: 'IP', mechanical_efficiency: 0.995 },
+        params: { eta_isen: 0.883, p_out: stage.p_out, stage: 'IP', mechanical_efficiency: 0.995 },
         inlet_ports: [
-          { id: `${stage.id}_in1`, name: 'steam_in', type: 'inlet', p: prevP, t: idx === 0 ? 566 : 350, h: prevH, m: prevM, s: 7.42 + idx * 0.1 },
+          { id: `${stage.id}_in1`, name: 'steam_in', type: 'inlet', p: prevP, t: idx === 0 ? 610 : 350, h: prevH, m: prevM, s: 7.42 + idx * 0.1 },
           { id: `${stage.id}_in2`, name: 'power_in', type: 'inlet', p: 0, t: 0, h: 0, m: 0, s: 0, w: 0 },
         ],
         outlet_ports: [
@@ -694,9 +740,9 @@ export const useModelStore = defineStore('model', () => {
     connections.push({ id: 'conn_reheat_ip1', from: { componentId: 'tpl_boiler', portIndex: 1 }, to: { componentId: 'tpl_ip1', portIndex: 0 } })
 
     // 创建低压缸
-    prevM = 380
+    prevM = 340
     prevP = 1.0
-    prevH = 2970
+    prevH = 3187
     lpStages.forEach((stage, idx) => {
       const turbine: Component = {
         id: stage.id,
@@ -704,9 +750,9 @@ export const useModelStore = defineStore('model', () => {
         name: stage.name,
         x: stage.x,
         y: 180,
-        params: { eta_isen: 0.88, p_out: stage.p_out, stage: 'LP', mechanical_efficiency: 0.995 },
+        params: { eta_isen: 0.87, p_out: stage.p_out, stage: 'LP', mechanical_efficiency: 0.995 },
         inlet_ports: [
-          { id: `${stage.id}_in1`, name: 'steam_in', type: 'inlet', p: prevP, t: 250 - idx * 30, h: prevH, m: prevM, s: 7.68 + idx * 0.08 },
+          { id: `${stage.id}_in1`, name: 'steam_in', type: 'inlet', p: prevP, t: 363 - idx * 30, h: prevH, m: prevM, s: 7.68 + idx * 0.08 },
           { id: `${stage.id}_in2`, name: 'power_in', type: 'inlet', p: 0, t: 0, h: 0, m: 0, s: 0, w: 0 },
         ],
         outlet_ports: [
@@ -759,13 +805,13 @@ export const useModelStore = defineStore('model', () => {
       name: 'Condenser',
       x: 850,
       y: 400,
-      params: { ttd: 5.0, delta_t_cw: 10.0, p_cond: 0.0049, eta_heat_transfer: 0.98 },
+      params: { ttd: 5.0, delta_t_cw: 10.0, p_cond: 0.011, eta_heat_transfer: 0.98 },
       inlet_ports: [
-        { id: 'tpl_c_in1', name: 'steam_in', type: 'inlet' as const, p: 0.0049, t: 33, h: 2320, m: 320, s: 7.82 },
+        { id: 'tpl_c_in1', name: 'steam_in', type: 'inlet' as const, p: 0.011, t: 48, h: 2451, m: 340, s: 7.82 },
         { id: 'tpl_c_in2', name: 'cooling_in', type: 'inlet' as const, p: 0.1, t: 20, h: 84, m: 0, s: 0.296 },
       ],
       outlet_ports: [
-        { id: 'tpl_c_out1', name: 'water_out', type: 'outlet' as const, p: 0.0049, t: 33, h: 138, m: 320, s: 0.47 },
+        { id: 'tpl_c_out1', name: 'water_out', type: 'outlet' as const, p: 0.011, t: 48, h: 201, m: 340, s: 0.47 },
         { id: 'tpl_c_out2', name: 'cooling_out', type: 'outlet' as const, p: 0.1, t: 30, h: 126, m: 0, s: 0.435 },
       ],
     }
@@ -776,8 +822,8 @@ export const useModelStore = defineStore('model', () => {
       name: 'CondensatePump',
       x: 700,
       y: 450,
-      params: { eta_pump: 0.82, p_out: 1.6, eta_motor: 0.95 },
-      inlet_ports: [{ id: 'tpl_cp_in1', name: 'water_in', type: 'inlet' as const, p: 0.0049, t: 33, h: 138, m: 320, s: 0.47 }],
+      params: { eta_pump: 0.65, p_out: 2.5, eta_motor: 0.95 },
+      inlet_ports: [{ id: 'tpl_cp_in1', name: 'water_in', type: 'inlet' as const, p: 0.011, t: 48, h: 201, m: 340, s: 0.47 }],
       outlet_ports: [{ id: 'tpl_cp_out1', name: 'water_out', type: 'outlet' as const, p: 1.6, t: 34, h: 142, m: 320, s: 0.47 }],
     }
 
@@ -787,7 +833,7 @@ export const useModelStore = defineStore('model', () => {
       name: 'FeedwaterPump',
       x: 250,
       y: 400,
-      params: { eta_pump: 0.83, p_out: 29.0, eta_motor: 0.95, mass_flow: 1800 },
+      params: { eta_pump: 0.65, p_out: 31.0, eta_motor: 0.95, mass_flow: 1800 },
       inlet_ports: [{ id: 'tpl_fp_in1', name: 'water_in', type: 'inlet' as const, p: 0.8, t: 170, h: 720, m: 485, s: 2.04 }],
       outlet_ports: [{ id: 'tpl_fp_out1', name: 'water_out', type: 'outlet' as const, p: 29.0, t: 172, h: 725, m: 485, s: 2.04 }],
     }
@@ -798,7 +844,7 @@ export const useModelStore = defineStore('model', () => {
       name: 'Generator',
       x: 1050,
       y: 180,
-      params: { eta_gen: 0.99, eta_mech: 0.995 },
+      params: { eta_gen: 0.995, eta_mech: 0.995 },
       inlet_ports: [{ id: 'tpl_g_in1', name: 'mechanical_in', type: 'inlet' as const, p: 0, t: 0, h: 0, m: 0, s: 0, w_mechanical: 0 }],
       outlet_ports: [{ id: 'tpl_g_out1', name: 'electrical_out', type: 'outlet' as const, p: 0, t: 0, h: 0, m: 0, s: 0, w_electrical: 0 }],
     }
@@ -809,7 +855,7 @@ export const useModelStore = defineStore('model', () => {
       name: 'HP_Heater_1',
       x: 450,
       y: 350,
-      params: { heater_type: 'HP', ttd: 3.0, dca: 5.0, eta: 0.99, p_heater: 7.2, p_water_out: 28.0 },
+      params: { heater_type: 'HP', ttd: 4.5, dca: 5.0, eta: 0.99, p_heater: 7.741, p_water_out: 28.0 },
       inlet_ports: [
         { id: 'tpl_h1_in1', name: 'water_in', type: 'inlet' as const, p: 28.0, t: 260, h: 1115, m: 485, s: 2.98 },
         { id: 'tpl_h1_in2', name: 'steam_in', type: 'inlet' as const, p: 7.2, t: 280, h: 2820, m: 39, s: 6.35 },
@@ -827,15 +873,15 @@ export const useModelStore = defineStore('model', () => {
       name: 'HP_Heater_2',
       x: 350,
       y: 450,
-      params: { heater_type: 'HP', ttd: 3.0, dca: 5.0, eta: 0.99, p_heater: 5.2, p_water_out: 28.0 },
+      params: { heater_type: 'HP', ttd: 4.2, dca: 5.0, eta: 0.99, p_heater: 5.893, p_water_out: 28.0 },
       inlet_ports: [
         { id: 'tpl_h2_in1', name: 'water_in', type: 'inlet' as const, p: 28.0, t: 230, h: 993, m: 485, s: 2.62 },
-        { id: 'tpl_h2_in2', name: 'steam_in', type: 'inlet' as const, p: 5.2, t: 260, h: 2760, m: 37, s: 6.38 },
-        { id: 'tpl_h2_in3', name: 'drain_in', type: 'inlet' as const, p: 7.2, t: 265, h: 1118, m: 39, s: 2.99 },
+        { id: 'tpl_h2_in2', name: 'steam_in', type: 'inlet' as const, p: 5.893, t: 260, h: 2760, m: 37, s: 6.38 },
+        { id: 'tpl_h2_in3', name: 'drain_in', type: 'inlet' as const, p: 7.741, t: 265, h: 1118, m: 39, s: 2.99 },
       ],
       outlet_ports: [
         { id: 'tpl_h2_out1', name: 'water_out', type: 'outlet' as const, p: 28.0, t: 260, h: 1115, m: 485, s: 2.98 },
-        { id: 'tpl_h2_out2', name: 'drain_out', type: 'outlet' as const, p: 5.2, t: 235, h: 995, m: 76, s: 2.62 },
+        { id: 'tpl_h2_out2', name: 'drain_out', type: 'outlet' as const, p: 5.893, t: 235, h: 995, m: 76, s: 2.62 },
       ],
     }
 
@@ -846,15 +892,15 @@ export const useModelStore = defineStore('model', () => {
       name: 'HP_Heater_3',
       x: 350,
       y: 350,
-      params: { heater_type: 'HP', ttd: 3.0, dca: 5.0, eta: 0.99, p_heater: 4.5, p_water_out: 28.0 },
+      params: { heater_type: 'HP', ttd: 3.9, dca: 5.0, eta: 0.99, p_heater: 5.78, p_water_out: 28.0 },
       inlet_ports: [
         { id: 'tpl_h3_in1', name: 'water_in', type: 'inlet' as const, p: 28.0, t: 195, h: 830, m: 485, s: 2.28 },
-        { id: 'tpl_h3_in2', name: 'steam_in', type: 'inlet' as const, p: 4.5, t: 250, h: 2720, m: 17, s: 6.42 },
-        { id: 'tpl_h3_in3', name: 'drain_in', type: 'inlet' as const, p: 5.2, t: 235, h: 995, m: 76, s: 2.62 },
+        { id: 'tpl_h3_in2', name: 'steam_in', type: 'inlet' as const, p: 5.78, t: 250, h: 2720, m: 17, s: 6.42 },
+        { id: 'tpl_h3_in3', name: 'drain_in', type: 'inlet' as const, p: 5.893, t: 235, h: 995, m: 76, s: 2.62 },
       ],
       outlet_ports: [
         { id: 'tpl_h3_out1', name: 'water_out', type: 'outlet' as const, p: 28.0, t: 230, h: 993, m: 485, s: 2.62 },
-        { id: 'tpl_h3_out2', name: 'drain_out', type: 'outlet' as const, p: 4.5, t: 198, h: 840, m: 93, s: 2.30 },
+        { id: 'tpl_h3_out2', name: 'drain_out', type: 'outlet' as const, p: 5.78, t: 198, h: 840, m: 93, s: 2.30 },
       ],
     }
 
@@ -868,7 +914,7 @@ export const useModelStore = defineStore('model', () => {
       inlet_ports: [
         { id: 'tpl_da_in1', name: 'water_in', type: 'inlet' as const, p: 1.5, t: 140, h: 592, m: 320, s: 1.72 },
         { id: 'tpl_da_in2', name: 'steam_in', type: 'inlet' as const, p: 0.8, t: 170, h: 2770, m: 165, s: 7.15 },
-        { id: 'tpl_da_in3', name: 'drain_in', type: 'inlet' as const, p: 4.5, t: 198, h: 840, m: 93, s: 2.30 },
+        { id: 'tpl_da_in3', name: 'drain_in', type: 'inlet' as const, p: 5.78, t: 198, h: 840, m: 93, s: 2.30 },
       ],
       outlet_ports: [
         { id: 'tpl_da_out1', name: 'water_out', type: 'outlet' as const, p: 0.8, t: 170, h: 720, m: 485, s: 2.04 },
@@ -882,10 +928,10 @@ export const useModelStore = defineStore('model', () => {
       name: 'LP_Heater_5',
       x: 550,
       y: 400,
-      params: { heater_type: 'LP', ttd: 3.0, dca: 5.0, eta: 0.99, p_heater: 1.5, p_water_out: 1.5 },
+      params: { heater_type: 'LP', ttd: 3.0, dca: 5.0, eta: 0.99, p_heater: 1.239, p_water_out: 1.5 },
       inlet_ports: [
         { id: 'tpl_lp5_in1', name: 'water_in', type: 'inlet' as const, p: 1.5, t: 110, h: 462, m: 320, s: 1.34 },
-        { id: 'tpl_lp5_in2', name: 'steam_in', type: 'inlet' as const, p: 1.5, t: 198, h: 2750, m: 28, s: 6.68 },
+        { id: 'tpl_lp5_in2', name: 'steam_in', type: 'inlet' as const, p: 1.239, t: 198, h: 2750, m: 28, s: 6.68 },
         { id: 'tpl_lp5_in3', name: 'drain_in', type: 'inlet' as const, p: 0, t: 0, h: 0, m: 0, s: 0 },
       ],
       outlet_ports: [
@@ -900,15 +946,15 @@ export const useModelStore = defineStore('model', () => {
       name: 'LP_Heater_6',
       x: 600,
       y: 400,
-      params: { heater_type: 'LP', ttd: 3.0, dca: 5.0, eta: 0.99, p_heater: 0.6, p_water_out: 1.5 },
+      params: { heater_type: 'LP', ttd: 3.0, dca: 5.0, eta: 0.99, p_heater: 0.523, p_water_out: 1.5 },
       inlet_ports: [
         { id: 'tpl_lp6_in1', name: 'water_in', type: 'inlet' as const, p: 1.5, t: 80, h: 335, m: 320, s: 0.99 },
-        { id: 'tpl_lp6_in2', name: 'steam_in', type: 'inlet' as const, p: 0.6, t: 158, h: 2700, m: 23, s: 6.82 },
-        { id: 'tpl_lp6_in3', name: 'drain_in', type: 'inlet' as const, p: 1.5, t: 118, h: 495, m: 28, s: 1.43 },
+        { id: 'tpl_lp6_in2', name: 'steam_in', type: 'inlet' as const, p: 0.523, t: 158, h: 2700, m: 23, s: 6.82 },
+        { id: 'tpl_lp6_in3', name: 'drain_in', type: 'inlet' as const, p: 1.239, t: 118, h: 495, m: 28, s: 1.43 },
       ],
       outlet_ports: [
         { id: 'tpl_lp6_out1', name: 'water_out', type: 'outlet' as const, p: 1.5, t: 110, h: 462, m: 320, s: 1.34 },
-        { id: 'tpl_lp6_out2', name: 'drain_out', type: 'outlet' as const, p: 0.6, t: 88, h: 369, m: 51, s: 1.10 },
+        { id: 'tpl_lp6_out2', name: 'drain_out', type: 'outlet' as const, p: 0.523, t: 88, h: 369, m: 51, s: 1.10 },
       ],
     }
 
@@ -918,15 +964,15 @@ export const useModelStore = defineStore('model', () => {
       name: 'LP_Heater_7',
       x: 650,
       y: 400,
-      params: { heater_type: 'LP', ttd: 3.0, dca: 5.0, eta: 0.99, p_heater: 0.25, p_water_out: 1.5 },
+      params: { heater_type: 'LP', ttd: 3.0, dca: 5.0, eta: 0.99, p_heater: 0.26, p_water_out: 1.5 },
       inlet_ports: [
         { id: 'tpl_lp7_in1', name: 'water_in', type: 'inlet' as const, p: 1.5, t: 55, h: 230, m: 320, s: 0.68 },
-        { id: 'tpl_lp7_in2', name: 'steam_in', type: 'inlet' as const, p: 0.25, t: 127, h: 2650, m: 19, s: 7.05 },
-        { id: 'tpl_lp7_in3', name: 'drain_in', type: 'inlet' as const, p: 0.6, t: 88, h: 369, m: 51, s: 1.10 },
+        { id: 'tpl_lp7_in2', name: 'steam_in', type: 'inlet' as const, p: 0.26, t: 127, h: 2650, m: 19, s: 7.05 },
+        { id: 'tpl_lp7_in3', name: 'drain_in', type: 'inlet' as const, p: 0.523, t: 88, h: 369, m: 51, s: 1.10 },
       ],
       outlet_ports: [
         { id: 'tpl_lp7_out1', name: 'water_out', type: 'outlet' as const, p: 1.5, t: 80, h: 335, m: 320, s: 0.99 },
-        { id: 'tpl_lp7_out2', name: 'drain_out', type: 'outlet' as const, p: 0.25, t: 62, h: 258, m: 70, s: 0.77 },
+        { id: 'tpl_lp7_out2', name: 'drain_out', type: 'outlet' as const, p: 0.26, t: 62, h: 258, m: 70, s: 0.77 },
       ],
     }
 
@@ -936,15 +982,15 @@ export const useModelStore = defineStore('model', () => {
       name: 'LP_Heater_8',
       x: 700,
       y: 400,
-      params: { heater_type: 'LP', ttd: 3.0, dca: 5.0, eta: 0.99, p_heater: 0.08, p_water_out: 1.5 },
+      params: { heater_type: 'LP', ttd: 3.0, dca: 5.0, eta: 0.99, p_heater: 0.11, p_water_out: 1.5 },
       inlet_ports: [
         { id: 'tpl_lp8_in1', name: 'water_in', type: 'inlet' as const, p: 1.5, t: 35, h: 146, m: 320, s: 0.48 },
-        { id: 'tpl_lp8_in2', name: 'steam_in', type: 'inlet' as const, p: 0.08, t: 41, h: 2580, m: 15, s: 7.55 },
-        { id: 'tpl_lp8_in3', name: 'drain_in', type: 'inlet' as const, p: 0.25, t: 62, h: 258, m: 70, s: 0.77 },
+        { id: 'tpl_lp8_in2', name: 'steam_in', type: 'inlet' as const, p: 0.11, t: 41, h: 2580, m: 15, s: 7.55 },
+        { id: 'tpl_lp8_in3', name: 'drain_in', type: 'inlet' as const, p: 0.26, t: 62, h: 258, m: 70, s: 0.77 },
       ],
       outlet_ports: [
         { id: 'tpl_lp8_out1', name: 'water_out', type: 'outlet' as const, p: 1.5, t: 55, h: 230, m: 320, s: 0.68 },
-        { id: 'tpl_lp8_out2', name: 'drain_out', type: 'outlet' as const, p: 0.08, t: 43, h: 180, m: 85, s: 0.61 },
+        { id: 'tpl_lp8_out2', name: 'drain_out', type: 'outlet' as const, p: 0.11, t: 43, h: 180, m: 85, s: 0.61 },
       ],
     }
 
@@ -1014,6 +1060,45 @@ export const useModelStore = defineStore('model', () => {
     return { components: components_list, connections: connections }
   }
 
+  function validateModel(): { valid: boolean; errors: string[] } {
+    const errors: string[] = []
+    const comps = components.value
+    const conns = connections.value
+
+    if (comps.length === 0) {
+      errors.push('模型中没有组件')
+      return { valid: false, errors }
+    }
+
+    const types = new Set(comps.map((c) => c.type))
+    if (!types.has('boiler')) errors.push('缺少锅炉组件')
+    if (!types.has('generator')) errors.push('缺少发电机组件')
+    if (!types.has('condenser')) errors.push('缺少凝汽器组件')
+
+    // 检查是否有汽轮机类组件
+    const hasTurbine = comps.some(
+      (c) => c.type === 'turbine' || c.type === 'turbine_hp' || c.type === 'turbine_ip' || c.type === 'turbine_lp'
+    )
+    if (!hasTurbine) errors.push('缺少汽轮机组件')
+
+    // 检查功率连接（多缸结构）
+    const turbineCount = comps.filter((c) => c.type === 'turbine').length
+    if (turbineCount > 1) {
+      const hasPowerConn = conns.some((c) => {
+        const fromComp = comps.find((comp) => comp.id === c.from.componentId)
+        const toComp = comps.find((comp) => comp.id === c.to.componentId)
+        const fromPort = fromComp?.outlet_ports[c.from.portIndex]?.name || ''
+        const toPort = toComp?.inlet_ports[c.to.portIndex]?.name || ''
+        return fromPort.includes('power') || toPort.includes('power')
+      })
+      if (!hasPowerConn) {
+        errors.push('多缸汽轮机缺少功率串联连接')
+      }
+    }
+
+    return { valid: errors.length === 0, errors }
+  }
+
   return {
     // 状态
     components,
@@ -1041,5 +1126,6 @@ export const useModelStore = defineStore('model', () => {
     getComponentConfig,
     getAllComponentConfigs,
     generate600MWTemplate,
+    validateModel,
   }
 })

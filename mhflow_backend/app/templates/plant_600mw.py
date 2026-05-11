@@ -2,14 +2,14 @@
 
 定义一个典型的600MW超超临界一次再热机组热力系统模型。
 
-系统参数:
-- 主蒸汽: 25.0 MPa, 600°C
-- 再热蒸汽: 4.5 MPa, 600°C
+系统参数(对标660MW设计值):
+- 主蒸汽: 28.0 MPa, 600°C
+- 再热蒸汽: 5.48 MPa, 610°C
 - 8级回热抽汽 (3高加 + 1除氧 + 4低加)
-- 凝汽器压力: 4.9 kPa
-- 锅炉效率: 93%
-- 汽轮机效率: HP 88%, IP 90%, LP 88%
-- 发电机效率: 99%
+- 凝汽器压力: 11 kPa
+- 锅炉效率: 95%
+- 汽轮机效率: HP 87.9%, IP 88.3%, LP 87%
+- 发电机效率: 99.5%
 """
 from typing import Dict, Any
 
@@ -26,10 +26,10 @@ def get_600mw_template() -> Dict[str, Any]:
         "description": "典型600MW超超临界一次再热凝汽式汽轮发电机组热力系统模型",
         "capacity_mw": 600,
         "initial_conditions": {
-            "main_steam_flow": 480.0,  # kg/s (约1728 t/h)
-            "feedwater_temp": 275.0,  # °C
-            "feedwater_pressure": 29.0,  # MPa
-            "condenser_pressure": 0.0049,  # MPa
+            "main_steam_flow": 501.6,  # kg/s (约1805.8 t/h)
+            "feedwater_temp": 295.0,  # °C
+            "feedwater_pressure": 30.0,  # MPa
+            "condenser_pressure": 0.011,  # MPa (11 kPa)
         },
         "components": [
             # ===== 锅炉 =====
@@ -37,20 +37,21 @@ def get_600mw_template() -> Dict[str, Any]:
                 "component_type": "boiler",
                 "name": "Boiler",
                 "inlet_ports": [
-                    {"name": "feedwater_in", "p": 29.0, "t": 275.0, "h": 0.0, "m": 480.0},
+                    {"name": "feedwater_in", "p": 30.0, "t": 295.0, "h": 0.0, "m": 501.6},
                     {"name": "reheat_in", "p": 4.5, "t": 0.0, "h": 0.0, "m": 0.0},
                 ],
                 "outlet_ports": [
-                    {"name": "steam_out", "p": 25.0, "t": 600.0, "h": 0.0, "m": 480.0},
-                    {"name": "reheat_out", "p": 4.5, "t": 600.0, "h": 0.0, "m": 0.0},
+                    {"name": "steam_out", "p": 28.0, "t": 600.0, "h": 0.0, "m": 501.6},
+                    {"name": "reheat_out", "p": 5.48, "t": 610.0, "h": 0.0, "m": 0.0},
                 ],
                 "params": {
-                    "eta_boiler": 0.93,
-                    "fuel_lhv": 21000.0,
-                    "p_out": 25.0,
-                    "t_out": 600.0,
-                    "p_reheat_out": 4.5,
-                    "t_reheat_out": 600.0,
+                    "boiler_efficiency": 95.0,
+                    "blowdown_rate": 0.0,
+                    "fuel_lower_heating_value": 21000.0,
+                    "main_steam_pressure": 28.0,
+                    "main_steam_temperature": 600.0,
+                    "reheat_pressure_drop": 0.3,
+                    "reheat_temperature": 610.0,
                 },
             },
 
@@ -59,19 +60,21 @@ def get_600mw_template() -> Dict[str, Any]:
                 "component_type": "turbine",
                 "name": "HP_Turbine",
                 "inlet_ports": [
-                    {"name": "steam_in", "p": 25.0, "t": 600.0, "h": 0.0, "m": 480.0},
+                    {"name": "steam_in", "p": 28.0, "t": 600.0, "h": 0.0, "m": 501.6},
+                    {"name": "power_in", "p": 0.0, "t": 0.0, "h": 0.0, "m": 0.0, "w": 0.0},
                 ],
                 "outlet_ports": [
-                    {"name": "steam_out", "p": 4.5, "t": 0.0, "h": 0.0, "m": 0.0},
+                    {"name": "steam_out", "p": 5.78, "t": 0.0, "h": 0.0, "m": 0.0},
+                    {"name": "power_out", "p": 0.0, "t": 0.0, "h": 0.0, "m": 0.0, "w": 0.0},
                 ],
                 "params": {
-                    "eta_isen": 0.88,
-                    "p_out": 4.5,
+                    "eta_isen": 0.879,
+                    "p_out": 5.78,
                     "stage": "HP",
                     "extractions": [
-                        {"name": "ext_hp1", "p": 7.2, "m_frac": 0.082},  # 第1级抽汽(高加1)
-                        {"name": "ext_hp2", "p": 5.2, "m_frac": 0.078},  # 第2级抽汽(高加2)
-                        {"name": "ext_hp3", "p": 4.5, "m_frac": 0.035},  # 第3级抽汽(高加3)
+                        {"name": "ext_hp1", "p": 7.741, "m_frac": 0.082},  # 第1级抽汽(高加1)
+                        {"name": "ext_hp2", "p": 5.893, "m_frac": 0.078},  # 第2级抽汽(高加2)
+                        {"name": "ext_hp3", "p": 5.78, "m_frac": 0.035},  # 第3级抽汽(高加3/再热冷段)
                     ],
                 },
             },
@@ -81,18 +84,20 @@ def get_600mw_template() -> Dict[str, Any]:
                 "component_type": "turbine",
                 "name": "IP_Turbine",
                 "inlet_ports": [
-                    {"name": "steam_in", "p": 4.5, "t": 600.0, "h": 0.0, "m": 0.0},
+                    {"name": "steam_in", "p": 5.48, "t": 610.0, "h": 0.0, "m": 0.0},
+                    {"name": "power_in", "p": 0.0, "t": 0.0, "h": 0.0, "m": 0.0, "w": 0.0},
                 ],
                 "outlet_ports": [
                     {"name": "steam_out", "p": 1.0, "t": 0.0, "h": 0.0, "m": 0.0},
+                    {"name": "power_out", "p": 0.0, "t": 0.0, "h": 0.0, "m": 0.0, "w": 0.0},
                 ],
                 "params": {
-                    "eta_isen": 0.90,
+                    "eta_isen": 0.883,
                     "p_out": 1.0,
                     "stage": "IP",
                     "extractions": [
-                        {"name": "ext_ip1", "p": 2.5, "m_frac": 0.060},  # 第4级抽汽(除氧器)
-                        {"name": "ext_ip2", "p": 1.5, "m_frac": 0.035},  # 第5级抽汽(低加5)
+                        {"name": "ext_ip1", "p": 2.936, "m_frac": 0.060},  # 第4级抽汽(除氧器)
+                        {"name": "ext_ip2", "p": 1.239, "m_frac": 0.035},  # 第5级抽汽(低加5)
                     ],
                 },
             },
@@ -103,18 +108,20 @@ def get_600mw_template() -> Dict[str, Any]:
                 "name": "LP_Turbine",
                 "inlet_ports": [
                     {"name": "steam_in", "p": 1.0, "t": 0.0, "h": 0.0, "m": 0.0},
+                    {"name": "power_in", "p": 0.0, "t": 0.0, "h": 0.0, "m": 0.0, "w": 0.0},
                 ],
                 "outlet_ports": [
                     {"name": "steam_out", "p": 0.0049, "t": 0.0, "h": 0.0, "m": 0.0},
+                    {"name": "power_out", "p": 0.0, "t": 0.0, "h": 0.0, "m": 0.0, "w": 0.0},
                 ],
                 "params": {
-                    "eta_isen": 0.88,
-                    "p_out": 0.0049,
+                    "eta_isen": 0.87,
+                    "p_out": 0.011,
                     "stage": "LP",
                     "extractions": [
-                        {"name": "ext_lp1", "p": 0.6, "m_frac": 0.030},  # 第6级抽汽(低加6)
-                        {"name": "ext_lp2", "p": 0.25, "m_frac": 0.025},  # 第7级抽汽(低加7)
-                        {"name": "ext_lp3", "p": 0.08, "m_frac": 0.020},  # 第8级抽汽(低加8)
+                        {"name": "ext_lp1", "p": 0.523, "m_frac": 0.030},  # 第6级抽汽(低加6)
+                        {"name": "ext_lp2", "p": 0.26, "m_frac": 0.025},  # 第7级抽汽(低加7)
+                        {"name": "ext_lp3", "p": 0.11, "m_frac": 0.020},  # 第8级抽汽(低加8)
                     ],
                 },
             },
@@ -124,17 +131,17 @@ def get_600mw_template() -> Dict[str, Any]:
                 "component_type": "condenser",
                 "name": "Condenser",
                 "inlet_ports": [
-                    {"name": "steam_in", "p": 0.0049, "t": 0.0, "h": 0.0, "m": 0.0},
+                    {"name": "steam_in", "p": 0.011, "t": 0.0, "h": 0.0, "m": 0.0},
                     {"name": "cooling_in", "p": 0.1, "t": 20.0, "h": 0.0, "m": 0.0},
                 ],
                 "outlet_ports": [
-                    {"name": "water_out", "p": 0.0049, "t": 0.0, "h": 0.0, "m": 0.0},
+                    {"name": "water_out", "p": 0.011, "t": 0.0, "h": 0.0, "m": 0.0},
                     {"name": "cooling_out", "p": 0.1, "t": 0.0, "h": 0.0, "m": 0.0},
                 ],
                 "params": {
                     "ttd": 5.0,
                     "delta_t_cw": 10.0,
-                    "p_cond": 0.0049,
+                    "p_cond": 0.011,
                     "eta_heat_transfer": 0.98,
                 },
             },
@@ -147,11 +154,11 @@ def get_600mw_template() -> Dict[str, Any]:
                     {"name": "water_in", "p": 0.0049, "t": 33.0, "h": 0.0, "m": 0.0},
                 ],
                 "outlet_ports": [
-                    {"name": "water_out", "p": 1.6, "t": 0.0, "h": 0.0, "m": 0.0},
+                    {"name": "water_out", "p": 2.5, "t": 0.0, "h": 0.0, "m": 0.0},
                 ],
                 "params": {
-                    "eta_pump": 0.82,
-                    "p_out": 1.6,
+                    "eta_pump": 0.65,
+                    "p_out": 2.5,
                     "eta_motor": 0.95,
                 },
             },
@@ -162,7 +169,7 @@ def get_600mw_template() -> Dict[str, Any]:
                 "name": "LP_Heater_8",
                 "inlet_ports": [
                     {"name": "water_in", "p": 1.5, "t": 35.0, "h": 0.0, "m": 0.0},
-                    {"name": "steam_in", "p": 0.08, "t": 0.0, "h": 0.0, "m": 0.0},
+                    {"name": "steam_in", "p": 0.11, "t": 0.0, "h": 0.0, "m": 0.0},
                     {"name": "drain_in", "p": 0.0, "t": 0.0, "h": 0.0, "m": 0.0},
                 ],
                 "outlet_ports": [
@@ -174,7 +181,7 @@ def get_600mw_template() -> Dict[str, Any]:
                     "ttd": 3.0,
                     "dca": 5.0,
                     "eta": 0.99,
-                    "p_heater": 0.08,
+                    "p_heater": 0.11,
                     "p_water_out": 1.5,
                 },
             },
@@ -183,7 +190,7 @@ def get_600mw_template() -> Dict[str, Any]:
                 "name": "LP_Heater_7",
                 "inlet_ports": [
                     {"name": "water_in", "p": 1.5, "t": 55.0, "h": 0.0, "m": 0.0},
-                    {"name": "steam_in", "p": 0.25, "t": 0.0, "h": 0.0, "m": 0.0},
+                    {"name": "steam_in", "p": 0.26, "t": 0.0, "h": 0.0, "m": 0.0},
                     {"name": "drain_in", "p": 0.0, "t": 0.0, "h": 0.0, "m": 0.0},
                 ],
                 "outlet_ports": [
@@ -195,7 +202,7 @@ def get_600mw_template() -> Dict[str, Any]:
                     "ttd": 3.0,
                     "dca": 5.0,
                     "eta": 0.99,
-                    "p_heater": 0.25,
+                    "p_heater": 0.26,
                     "p_water_out": 1.5,
                 },
             },
@@ -204,7 +211,7 @@ def get_600mw_template() -> Dict[str, Any]:
                 "name": "LP_Heater_6",
                 "inlet_ports": [
                     {"name": "water_in", "p": 1.5, "t": 80.0, "h": 0.0, "m": 0.0},
-                    {"name": "steam_in", "p": 0.6, "t": 0.0, "h": 0.0, "m": 0.0},
+                    {"name": "steam_in", "p": 0.523, "t": 0.0, "h": 0.0, "m": 0.0},
                     {"name": "drain_in", "p": 0.0, "t": 0.0, "h": 0.0, "m": 0.0},
                 ],
                 "outlet_ports": [
@@ -216,7 +223,7 @@ def get_600mw_template() -> Dict[str, Any]:
                     "ttd": 3.0,
                     "dca": 5.0,
                     "eta": 0.99,
-                    "p_heater": 0.6,
+                    "p_heater": 0.523,
                     "p_water_out": 1.5,
                 },
             },
@@ -225,7 +232,7 @@ def get_600mw_template() -> Dict[str, Any]:
                 "name": "LP_Heater_5",
                 "inlet_ports": [
                     {"name": "water_in", "p": 1.5, "t": 110.0, "h": 0.0, "m": 0.0},
-                    {"name": "steam_in", "p": 1.5, "t": 0.0, "h": 0.0, "m": 0.0},
+                    {"name": "steam_in", "p": 1.239, "t": 0.0, "h": 0.0, "m": 0.0},
                     {"name": "drain_in", "p": 0.0, "t": 0.0, "h": 0.0, "m": 0.0},
                 ],
                 "outlet_ports": [
@@ -237,7 +244,7 @@ def get_600mw_template() -> Dict[str, Any]:
                     "ttd": 3.0,
                     "dca": 5.0,
                     "eta": 0.99,
-                    "p_heater": 1.5,
+                    "p_heater": 1.239,
                     "p_water_out": 1.5,
                 },
             },
@@ -273,11 +280,11 @@ def get_600mw_template() -> Dict[str, Any]:
                     {"name": "water_in", "p": 0.8, "t": 170.0, "h": 0.0, "m": 0.0},
                 ],
                 "outlet_ports": [
-                    {"name": "water_out", "p": 29.0, "t": 0.0, "h": 0.0, "m": 0.0},
+                    {"name": "water_out", "p": 31.0, "t": 0.0, "h": 0.0, "m": 0.0},
                 ],
                 "params": {
-                    "eta_pump": 0.83,
-                    "p_out": 29.0,
+                    "eta_pump": 0.65,
+                    "p_out": 31.0,
                     "eta_motor": 0.95,
                     "mass_flow": 1800,  # 给水流量 t/h（约500 kg/s），用于变工况计算
                 },
@@ -289,7 +296,7 @@ def get_600mw_template() -> Dict[str, Any]:
                 "name": "HP_Heater_3",
                 "inlet_ports": [
                     {"name": "water_in", "p": 28.0, "t": 195.0, "h": 0.0, "m": 0.0},
-                    {"name": "steam_in", "p": 4.5, "t": 0.0, "h": 0.0, "m": 0.0},
+                    {"name": "steam_in", "p": 5.78, "t": 0.0, "h": 0.0, "m": 0.0},
                     {"name": "drain_in", "p": 0.0, "t": 0.0, "h": 0.0, "m": 0.0},
                 ],
                 "outlet_ports": [
@@ -298,10 +305,10 @@ def get_600mw_template() -> Dict[str, Any]:
                 ],
                 "params": {
                     "heater_type": "HP",
-                    "ttd": 3.0,
+                    "ttd": 3.9,
                     "dca": 5.0,
                     "eta": 0.99,
-                    "p_heater": 4.5,
+                    "p_heater": 5.78,
                     "p_water_out": 28.0,
                 },
             },
@@ -310,7 +317,7 @@ def get_600mw_template() -> Dict[str, Any]:
                 "name": "HP_Heater_2",
                 "inlet_ports": [
                     {"name": "water_in", "p": 28.0, "t": 230.0, "h": 0.0, "m": 0.0},
-                    {"name": "steam_in", "p": 5.2, "t": 0.0, "h": 0.0, "m": 0.0},
+                    {"name": "steam_in", "p": 5.893, "t": 0.0, "h": 0.0, "m": 0.0},
                     {"name": "drain_in", "p": 0.0, "t": 0.0, "h": 0.0, "m": 0.0},
                 ],
                 "outlet_ports": [
@@ -319,10 +326,10 @@ def get_600mw_template() -> Dict[str, Any]:
                 ],
                 "params": {
                     "heater_type": "HP",
-                    "ttd": 3.0,
+                    "ttd": 4.2,
                     "dca": 5.0,
                     "eta": 0.99,
-                    "p_heater": 5.2,
+                    "p_heater": 5.893,
                     "p_water_out": 28.0,
                 },
             },
@@ -331,19 +338,19 @@ def get_600mw_template() -> Dict[str, Any]:
                 "name": "HP_Heater_1",
                 "inlet_ports": [
                     {"name": "water_in", "p": 28.0, "t": 260.0, "h": 0.0, "m": 0.0},
-                    {"name": "steam_in", "p": 7.2, "t": 0.0, "h": 0.0, "m": 0.0},
+                    {"name": "steam_in", "p": 6.2, "t": 0.0, "h": 0.0, "m": 0.0},
                     {"name": "drain_in", "p": 0.0, "t": 0.0, "h": 0.0, "m": 0.0},
                 ],
                 "outlet_ports": [
                     {"name": "water_out", "p": 28.0, "t": 0.0, "h": 0.0, "m": 0.0},
-                    {"name": "drain_out", "p": 7.2, "t": 0.0, "h": 0.0, "m": 0.0},
+                    {"name": "drain_out", "p": 6.2, "t": 0.0, "h": 0.0, "m": 0.0},
                 ],
                 "params": {
                     "heater_type": "HP",
-                    "ttd": 3.0,
+                    "ttd": 4.5,
                     "dca": 5.0,
                     "eta": 0.99,
-                    "p_heater": 7.2,
+                    "p_heater": 7.741,
                     "p_water_out": 28.0,
                 },
             },
@@ -359,7 +366,7 @@ def get_600mw_template() -> Dict[str, Any]:
                     {"name": "electrical_out", "p": 0.0, "t": 0.0, "h": 0.0, "m": 0.0, "w_electrical": 0.0},
                 ],
                 "params": {
-                    "eta_gen": 0.99,
+                    "eta_gen": 0.995,
                     "eta_mech": 0.995,
                 },
             },
@@ -414,10 +421,10 @@ def get_600mw_template() -> Dict[str, Any]:
             {"from": "LP_Heater_5.drain_out", "to": "LP_Heater_6.drain_in"},
             {"from": "LP_Heater_6.drain_out", "to": "LP_Heater_7.drain_in"},
             {"from": "LP_Heater_7.drain_out", "to": "LP_Heater_8.drain_in"},
-            # 汽轮机 -> 发电机
-            {"from": "HP_Turbine.steam_out", "to": "Generator.mechanical_in"},
-            {"from": "IP_Turbine.steam_out", "to": "Generator.mechanical_in"},
-            {"from": "LP_Turbine.steam_out", "to": "Generator.mechanical_in"},
+            # 功率连接（缸体串联）
+            {"from": "HP_Turbine.power_out", "to": "IP_Turbine.power_in"},
+            {"from": "IP_Turbine.power_out", "to": "LP_Turbine.power_in"},
+            {"from": "LP_Turbine.power_out", "to": "Generator.mechanical_in"},
         ],
 
         "calculation_order": [

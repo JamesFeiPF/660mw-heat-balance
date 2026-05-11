@@ -338,7 +338,7 @@ function onDrop(e: DragEvent) {
   const canvasPos = screenToCanvas(mx, my, transform)
 
   const comp = store.addComponent(type, Math.round(canvasPos.x - 60), Math.round(canvasPos.y - 30))
-  store.selectComponent(comp.id)
+  if (comp) store.selectComponent(comp.id)
 }
 
 function resetConnecting() {

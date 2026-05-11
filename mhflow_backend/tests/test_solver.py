@@ -363,7 +363,7 @@ def test_solver():
     # 创建求解器
     solver = HeatBalanceSolver(
         model_data=model_data,
-        max_iterations=50,
+        max_outer_iterations=50,
         convergence_tolerance=0.01,
     )
 
@@ -372,7 +372,8 @@ def test_solver():
 
     # 输出结果
     print(f"\n收敛状态: {'收敛' if results['converged'] else '未收敛'}")
-    print(f"迭代次数: {results['iteration_count']}")
+    print(f"外层迭代次数: {results['outer_iteration_count']}")
+    print(f"内层迭代次数: {results['inner_iteration_count']}")
 
     perf = results.get("system_performance", {})
     print(f"\n系统性能指标:")

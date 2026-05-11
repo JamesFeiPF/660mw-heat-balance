@@ -14,10 +14,31 @@
     </div>
 
     <div class="toolbar-center">
-      <el-tooltip content="加载600MW超临界机组模板" placement="bottom">
+      <el-tooltip content="从本地JSON文件打开模型" placement="bottom">
+        <el-button @click="onOpenFile" :disabled="store.isSolving">
+          <el-icon><Upload /></el-icon>
+          <span>打开</span>
+        </el-button>
+      </el-tooltip>
+      <input
+        ref="fileInput"
+        type="file"
+        accept=".json"
+        style="display: none"
+        @change="handleFileChange"
+      />
+
+      <el-tooltip content="加载前端硬编码600MW模板（13段结构）" placement="bottom">
         <el-button @click="onLoadTemplate" :disabled="store.isSolving">
           <el-icon><FolderOpened /></el-icon>
           <span>加载模板</span>
+        </el-button>
+      </el-tooltip>
+
+      <el-tooltip content="从后端API加载3缸结构模板" placement="bottom">
+        <el-button @click="onLoadFromBackend" :disabled="store.isSolving" type="success" plain>
+          <el-icon><Download /></el-icon>
+          <span>加载后端模板</span>
         </el-button>
       </el-tooltip>
 
@@ -81,25 +102,70 @@ import {
   VideoPlay,
   Document,
   Grid,
+  Download,
+  Upload,
 } from '@element-plus/icons-vue'
 import { useModelStore } from '../stores/model'
-import { saveModel, solveModel, exportPDF, exportExcel } from '../api'
+import { saveModel, solveModel, exportPDF, exportExcel, loadModel, openModelFromFile } from '../api'
 import type { SolveResult } from '../types'
+import { ref } from 'vue'
 
 const store = useModelStore()
+const fileInput = ref<HTMLInputElement | null>(null)
+
+function onOpenFile() {
+  fileInput.value?.click()
+}
+
+async function handleFileChange(event: Event) {
+  const target = event.target as HTMLInputElement
+  const file = target.files?.[0]
+  if (!file) return
+
+  try {
+    const text = await file.text()
+    const json = JSON.parse(text)
+    const model = openModelFromFile(json)
+    store.loadTemplate(model)
+    ElMessage.success(`已打开模型：${file.name}（${model.components.length}个组件）`)
+  } catch (err: any) {
+    ElMessage.error(`打开失败: ${err.message}`)
+  } finally {
+    // 重置input，允许再次选择同一文件
+    target.value = ''
+  }
+}
 
 async function onLoadTemplate() {
   try {
     await ElMessageBox.confirm(
-      '加载600MW超临界机组模板将替换当前模型，是否继续？',
+      '加载前端硬编码600MW模板（13段结构）将替换当前模型，是否继续？',
       '加载模板',
       { confirmButtonText: '确定', cancelButtonText: '取消', type: 'warning' }
     )
     const template = store.generate600MWTemplate()
     store.loadTemplate(template)
-    ElMessage.success('已加载600MW超临界机组模板')
+    ElMessage.success('已加载前端600MW模板（13段结构）')
   } catch {
     // 用户取消
+  }
+}
+
+async function onLoadFromBackend() {
+  try {
+    await ElMessageBox.confirm(
+      '从后端加载3缸结构模板将替换当前模型，是否继续？',
+      '加载后端模板',
+      { confirmButtonText: '确定', cancelButtonText: '取消', type: 'warning' }
+    )
+    store.setSolving(true)
+    const template = await loadModel('plant_600mw')
+    store.loadTemplate(template)
+    ElMessage.success(`已加载后端3缸模板（${template.components.length}个组件）`)
+  } catch (err: any) {
+    ElMessage.error(`加载失败: ${err.message}`)
+  } finally {
+    store.setSolving(false)
   }
 }
 

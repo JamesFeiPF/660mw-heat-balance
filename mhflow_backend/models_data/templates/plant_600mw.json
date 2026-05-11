@@ -1,0 +1,895 @@
+{
+  "template_id": "plant_600mw",
+  "name": "660MW超超临界机组模板",
+  "description": "主汽28MPa/600°C，再热5.48MPa/610°C，8级回热，3缸结构",
+  "version": "2.0",
+  "components": [
+    {
+      "component_type": "boiler",
+      "name": "Boiler",
+      "inlet_ports": [
+        {
+          "name": "feedwater_in",
+          "p": 30.0,
+          "t": 295.0,
+          "h": 0.0,
+          "m": 501.6
+        },
+        {
+          "name": "reheat_in",
+          "p": 4.5,
+          "t": 0.0,
+          "h": 0.0,
+          "m": 0.0
+        }
+      ],
+      "outlet_ports": [
+        {
+          "name": "steam_out",
+          "p": 28.0,
+          "t": 600.0,
+          "h": 0.0,
+          "m": 501.6
+        },
+        {
+          "name": "reheat_out",
+          "p": 5.48,
+          "t": 610.0,
+          "h": 0.0,
+          "m": 0.0
+        }
+      ],
+      "params": {
+        "boiler_efficiency": 95.0,
+        "blowdown_rate": 0.0,
+        "fuel_lower_heating_value": 21000.0,
+        "main_steam_pressure": 28.0,
+        "main_steam_temperature": 600.0,
+        "reheat_pressure_drop": 0.3,
+        "reheat_temperature": 610.0
+      }
+    },
+    {
+      "component_type": "turbine",
+      "name": "HP_Turbine",
+      "inlet_ports": [
+        {
+          "name": "steam_in",
+          "p": 28.0,
+          "t": 600.0,
+          "h": 0.0,
+          "m": 501.6
+        },
+        {
+          "name": "power_in",
+          "p": 0.0,
+          "t": 0.0,
+          "h": 0.0,
+          "m": 0.0,
+          "w": 0.0
+        }
+      ],
+      "outlet_ports": [
+        {
+          "name": "steam_out",
+          "p": 5.78,
+          "t": 0.0,
+          "h": 0.0,
+          "m": 0.0
+        },
+        {
+          "name": "power_out",
+          "p": 0.0,
+          "t": 0.0,
+          "h": 0.0,
+          "m": 0.0,
+          "w": 0.0
+        }
+      ],
+      "params": {
+        "eta_isen": 0.879,
+        "p_out": 5.78,
+        "stage": "HP",
+        "extractions": [
+          {
+            "name": "ext_hp1",
+            "p": 7.741,
+            "m_frac": 0.082
+          },
+          {
+            "name": "ext_hp2",
+            "p": 5.893,
+            "m_frac": 0.078
+          },
+          {
+            "name": "ext_hp3",
+            "p": 5.78,
+            "m_frac": 0.035
+          }
+        ]
+      }
+    },
+    {
+      "component_type": "turbine",
+      "name": "IP_Turbine",
+      "inlet_ports": [
+        {
+          "name": "steam_in",
+          "p": 5.48,
+          "t": 610.0,
+          "h": 0.0,
+          "m": 0.0
+        },
+        {
+          "name": "power_in",
+          "p": 0.0,
+          "t": 0.0,
+          "h": 0.0,
+          "m": 0.0,
+          "w": 0.0
+        }
+      ],
+      "outlet_ports": [
+        {
+          "name": "steam_out",
+          "p": 1.0,
+          "t": 0.0,
+          "h": 0.0,
+          "m": 0.0
+        },
+        {
+          "name": "power_out",
+          "p": 0.0,
+          "t": 0.0,
+          "h": 0.0,
+          "m": 0.0,
+          "w": 0.0
+        }
+      ],
+      "params": {
+        "eta_isen": 0.883,
+        "p_out": 1.0,
+        "stage": "IP",
+        "extractions": [
+          {
+            "name": "ext_ip1",
+            "p": 2.936,
+            "m_frac": 0.06
+          },
+          {
+            "name": "ext_ip2",
+            "p": 1.239,
+            "m_frac": 0.035
+          }
+        ]
+      }
+    },
+    {
+      "component_type": "turbine",
+      "name": "LP_Turbine",
+      "inlet_ports": [
+        {
+          "name": "steam_in",
+          "p": 1.0,
+          "t": 0.0,
+          "h": 0.0,
+          "m": 0.0
+        },
+        {
+          "name": "power_in",
+          "p": 0.0,
+          "t": 0.0,
+          "h": 0.0,
+          "m": 0.0,
+          "w": 0.0
+        }
+      ],
+      "outlet_ports": [
+        {
+          "name": "steam_out",
+          "p": 0.0049,
+          "t": 0.0,
+          "h": 0.0,
+          "m": 0.0
+        },
+        {
+          "name": "power_out",
+          "p": 0.0,
+          "t": 0.0,
+          "h": 0.0,
+          "m": 0.0,
+          "w": 0.0
+        }
+      ],
+      "params": {
+        "eta_isen": 0.87,
+        "p_out": 0.011,
+        "stage": "LP",
+        "extractions": [
+          {
+            "name": "ext_lp1",
+            "p": 0.523,
+            "m_frac": 0.03
+          },
+          {
+            "name": "ext_lp2",
+            "p": 0.26,
+            "m_frac": 0.025
+          },
+          {
+            "name": "ext_lp3",
+            "p": 0.11,
+            "m_frac": 0.02
+          }
+        ]
+      }
+    },
+    {
+      "component_type": "condenser",
+      "name": "Condenser",
+      "inlet_ports": [
+        {
+          "name": "steam_in",
+          "p": 0.011,
+          "t": 0.0,
+          "h": 0.0,
+          "m": 0.0
+        },
+        {
+          "name": "cooling_in",
+          "p": 0.1,
+          "t": 20.0,
+          "h": 0.0,
+          "m": 0.0
+        }
+      ],
+      "outlet_ports": [
+        {
+          "name": "water_out",
+          "p": 0.011,
+          "t": 0.0,
+          "h": 0.0,
+          "m": 0.0
+        },
+        {
+          "name": "cooling_out",
+          "p": 0.1,
+          "t": 0.0,
+          "h": 0.0,
+          "m": 0.0
+        }
+      ],
+      "params": {
+        "ttd": 5.0,
+        "delta_t_cw": 10.0,
+        "p_cond": 0.011,
+        "eta_heat_transfer": 0.98
+      }
+    },
+    {
+      "component_type": "pump",
+      "name": "CondensatePump",
+      "inlet_ports": [
+        {
+          "name": "water_in",
+          "p": 0.0049,
+          "t": 33.0,
+          "h": 0.0,
+          "m": 0.0
+        }
+      ],
+      "outlet_ports": [
+        {
+          "name": "water_out",
+          "p": 2.5,
+          "t": 0.0,
+          "h": 0.0,
+          "m": 0.0
+        }
+      ],
+      "params": {
+        "eta_pump": 0.65,
+        "p_out": 2.5,
+        "eta_motor": 0.95
+      }
+    },
+    {
+      "component_type": "heater",
+      "name": "LP_Heater_8",
+      "inlet_ports": [
+        {
+          "name": "water_in",
+          "p": 1.5,
+          "t": 35.0,
+          "h": 0.0,
+          "m": 0.0
+        },
+        {
+          "name": "steam_in",
+          "p": 0.11,
+          "t": 0.0,
+          "h": 0.0,
+          "m": 0.0
+        },
+        {
+          "name": "drain_in",
+          "p": 0.0,
+          "t": 0.0,
+          "h": 0.0,
+          "m": 0.0
+        }
+      ],
+      "outlet_ports": [
+        {
+          "name": "water_out",
+          "p": 1.5,
+          "t": 0.0,
+          "h": 0.0,
+          "m": 0.0
+        },
+        {
+          "name": "drain_out",
+          "p": 0.08,
+          "t": 0.0,
+          "h": 0.0,
+          "m": 0.0
+        }
+      ],
+      "params": {
+        "heater_type": "LP",
+        "ttd": 3.0,
+        "dca": 5.0,
+        "eta": 0.99,
+        "p_heater": 0.11,
+        "p_water_out": 1.5
+      }
+    },
+    {
+      "component_type": "heater",
+      "name": "LP_Heater_7",
+      "inlet_ports": [
+        {
+          "name": "water_in",
+          "p": 1.5,
+          "t": 55.0,
+          "h": 0.0,
+          "m": 0.0
+        },
+        {
+          "name": "steam_in",
+          "p": 0.26,
+          "t": 0.0,
+          "h": 0.0,
+          "m": 0.0
+        },
+        {
+          "name": "drain_in",
+          "p": 0.0,
+          "t": 0.0,
+          "h": 0.0,
+          "m": 0.0
+        }
+      ],
+      "outlet_ports": [
+        {
+          "name": "water_out",
+          "p": 1.5,
+          "t": 0.0,
+          "h": 0.0,
+          "m": 0.0
+        },
+        {
+          "name": "drain_out",
+          "p": 0.25,
+          "t": 0.0,
+          "h": 0.0,
+          "m": 0.0
+        }
+      ],
+      "params": {
+        "heater_type": "LP",
+        "ttd": 3.0,
+        "dca": 5.0,
+        "eta": 0.99,
+        "p_heater": 0.26,
+        "p_water_out": 1.5
+      }
+    },
+    {
+      "component_type": "heater",
+      "name": "LP_Heater_6",
+      "inlet_ports": [
+        {
+          "name": "water_in",
+          "p": 1.5,
+          "t": 80.0,
+          "h": 0.0,
+          "m": 0.0
+        },
+        {
+          "name": "steam_in",
+          "p": 0.523,
+          "t": 0.0,
+          "h": 0.0,
+          "m": 0.0
+        },
+        {
+          "name": "drain_in",
+          "p": 0.0,
+          "t": 0.0,
+          "h": 0.0,
+          "m": 0.0
+        }
+      ],
+      "outlet_ports": [
+        {
+          "name": "water_out",
+          "p": 1.5,
+          "t": 0.0,
+          "h": 0.0,
+          "m": 0.0
+        },
+        {
+          "name": "drain_out",
+          "p": 0.6,
+          "t": 0.0,
+          "h": 0.0,
+          "m": 0.0
+        }
+      ],
+      "params": {
+        "heater_type": "LP",
+        "ttd": 3.0,
+        "dca": 5.0,
+        "eta": 0.99,
+        "p_heater": 0.523,
+        "p_water_out": 1.5
+      }
+    },
+    {
+      "component_type": "heater",
+      "name": "LP_Heater_5",
+      "inlet_ports": [
+        {
+          "name": "water_in",
+          "p": 1.5,
+          "t": 110.0,
+          "h": 0.0,
+          "m": 0.0
+        },
+        {
+          "name": "steam_in",
+          "p": 1.239,
+          "t": 0.0,
+          "h": 0.0,
+          "m": 0.0
+        },
+        {
+          "name": "drain_in",
+          "p": 0.0,
+          "t": 0.0,
+          "h": 0.0,
+          "m": 0.0
+        }
+      ],
+      "outlet_ports": [
+        {
+          "name": "water_out",
+          "p": 1.5,
+          "t": 0.0,
+          "h": 0.0,
+          "m": 0.0
+        },
+        {
+          "name": "drain_out",
+          "p": 1.5,
+          "t": 0.0,
+          "h": 0.0,
+          "m": 0.0
+        }
+      ],
+      "params": {
+        "heater_type": "LP",
+        "ttd": 3.0,
+        "dca": 5.0,
+        "eta": 0.99,
+        "p_heater": 1.239,
+        "p_water_out": 1.5
+      }
+    },
+    {
+      "component_type": "heater",
+      "name": "Deaerator",
+      "inlet_ports": [
+        {
+          "name": "water_in",
+          "p": 0.8,
+          "t": 140.0,
+          "h": 0.0,
+          "m": 0.0
+        },
+        {
+          "name": "steam_in",
+          "p": 0.8,
+          "t": 0.0,
+          "h": 0.0,
+          "m": 0.0
+        },
+        {
+          "name": "drain_in",
+          "p": 0.0,
+          "t": 0.0,
+          "h": 0.0,
+          "m": 0.0
+        }
+      ],
+      "outlet_ports": [
+        {
+          "name": "water_out",
+          "p": 0.8,
+          "t": 0.0,
+          "h": 0.0,
+          "m": 0.0
+        },
+        {
+          "name": "drain_out",
+          "p": 0.8,
+          "t": 0.0,
+          "h": 0.0,
+          "m": 0.0
+        }
+      ],
+      "params": {
+        "heater_type": "DA",
+        "ttd": 0.0,
+        "dca": 0.0,
+        "eta": 0.99,
+        "p_heater": 0.8,
+        "p_water_out": 0.8
+      }
+    },
+    {
+      "component_type": "pump",
+      "name": "FeedwaterPump",
+      "inlet_ports": [
+        {
+          "name": "water_in",
+          "p": 0.8,
+          "t": 170.0,
+          "h": 0.0,
+          "m": 0.0
+        }
+      ],
+      "outlet_ports": [
+        {
+          "name": "water_out",
+          "p": 31.0,
+          "t": 0.0,
+          "h": 0.0,
+          "m": 0.0
+        }
+      ],
+      "params": {
+        "eta_pump": 0.65,
+        "p_out": 31.0,
+        "eta_motor": 0.95,
+        "mass_flow": 1800
+      }
+    },
+    {
+      "component_type": "heater",
+      "name": "HP_Heater_3",
+      "inlet_ports": [
+        {
+          "name": "water_in",
+          "p": 28.0,
+          "t": 195.0,
+          "h": 0.0,
+          "m": 0.0
+        },
+        {
+          "name": "steam_in",
+          "p": 5.78,
+          "t": 0.0,
+          "h": 0.0,
+          "m": 0.0
+        },
+        {
+          "name": "drain_in",
+          "p": 0.0,
+          "t": 0.0,
+          "h": 0.0,
+          "m": 0.0
+        }
+      ],
+      "outlet_ports": [
+        {
+          "name": "water_out",
+          "p": 28.0,
+          "t": 0.0,
+          "h": 0.0,
+          "m": 0.0
+        },
+        {
+          "name": "drain_out",
+          "p": 4.5,
+          "t": 0.0,
+          "h": 0.0,
+          "m": 0.0
+        }
+      ],
+      "params": {
+        "heater_type": "HP",
+        "ttd": 3.9,
+        "dca": 5.0,
+        "eta": 0.99,
+        "p_heater": 5.78,
+        "p_water_out": 28.0
+      }
+    },
+    {
+      "component_type": "heater",
+      "name": "HP_Heater_2",
+      "inlet_ports": [
+        {
+          "name": "water_in",
+          "p": 28.0,
+          "t": 230.0,
+          "h": 0.0,
+          "m": 0.0
+        },
+        {
+          "name": "steam_in",
+          "p": 5.893,
+          "t": 0.0,
+          "h": 0.0,
+          "m": 0.0
+        },
+        {
+          "name": "drain_in",
+          "p": 0.0,
+          "t": 0.0,
+          "h": 0.0,
+          "m": 0.0
+        }
+      ],
+      "outlet_ports": [
+        {
+          "name": "water_out",
+          "p": 28.0,
+          "t": 0.0,
+          "h": 0.0,
+          "m": 0.0
+        },
+        {
+          "name": "drain_out",
+          "p": 5.2,
+          "t": 0.0,
+          "h": 0.0,
+          "m": 0.0
+        }
+      ],
+      "params": {
+        "heater_type": "HP",
+        "ttd": 4.2,
+        "dca": 5.0,
+        "eta": 0.99,
+        "p_heater": 5.893,
+        "p_water_out": 28.0
+      }
+    },
+    {
+      "component_type": "heater",
+      "name": "HP_Heater_1",
+      "inlet_ports": [
+        {
+          "name": "water_in",
+          "p": 28.0,
+          "t": 260.0,
+          "h": 0.0,
+          "m": 0.0
+        },
+        {
+          "name": "steam_in",
+          "p": 6.2,
+          "t": 0.0,
+          "h": 0.0,
+          "m": 0.0
+        },
+        {
+          "name": "drain_in",
+          "p": 0.0,
+          "t": 0.0,
+          "h": 0.0,
+          "m": 0.0
+        }
+      ],
+      "outlet_ports": [
+        {
+          "name": "water_out",
+          "p": 28.0,
+          "t": 0.0,
+          "h": 0.0,
+          "m": 0.0
+        },
+        {
+          "name": "drain_out",
+          "p": 6.2,
+          "t": 0.0,
+          "h": 0.0,
+          "m": 0.0
+        }
+      ],
+      "params": {
+        "heater_type": "HP",
+        "ttd": 4.5,
+        "dca": 5.0,
+        "eta": 0.99,
+        "p_heater": 7.741,
+        "p_water_out": 28.0
+      }
+    },
+    {
+      "component_type": "generator",
+      "name": "Generator",
+      "inlet_ports": [
+        {
+          "name": "mechanical_in",
+          "p": 0.0,
+          "t": 0.0,
+          "h": 0.0,
+          "m": 0.0,
+          "w_mechanical": 0.0
+        }
+      ],
+      "outlet_ports": [
+        {
+          "name": "electrical_out",
+          "p": 0.0,
+          "t": 0.0,
+          "h": 0.0,
+          "m": 0.0,
+          "w_electrical": 0.0
+        }
+      ],
+      "params": {
+        "eta_gen": 0.995,
+        "eta_mech": 0.995
+      }
+    }
+  ],
+  "connections": [
+    {
+      "from": "Boiler.steam_out",
+      "to": "HP_Turbine.steam_in"
+    },
+    {
+      "from": "HP_Turbine.steam_out",
+      "to": "Boiler.reheat_in"
+    },
+    {
+      "from": "Boiler.reheat_out",
+      "to": "IP_Turbine.steam_in"
+    },
+    {
+      "from": "IP_Turbine.steam_out",
+      "to": "LP_Turbine.steam_in"
+    },
+    {
+      "from": "LP_Turbine.steam_out",
+      "to": "Condenser.steam_in"
+    },
+    {
+      "from": "Condenser.water_out",
+      "to": "CondensatePump.water_in"
+    },
+    {
+      "from": "CondensatePump.water_out",
+      "to": "LP_Heater_8.water_in"
+    },
+    {
+      "from": "LP_Heater_8.water_out",
+      "to": "LP_Heater_7.water_in"
+    },
+    {
+      "from": "LP_Heater_7.water_out",
+      "to": "LP_Heater_6.water_in"
+    },
+    {
+      "from": "LP_Heater_6.water_out",
+      "to": "LP_Heater_5.water_in"
+    },
+    {
+      "from": "LP_Heater_5.water_out",
+      "to": "Deaerator.water_in"
+    },
+    {
+      "from": "Deaerator.water_out",
+      "to": "FeedwaterPump.water_in"
+    },
+    {
+      "from": "FeedwaterPump.water_out",
+      "to": "HP_Heater_3.water_in"
+    },
+    {
+      "from": "HP_Heater_3.water_out",
+      "to": "HP_Heater_2.water_in"
+    },
+    {
+      "from": "HP_Heater_2.water_out",
+      "to": "HP_Heater_1.water_in"
+    },
+    {
+      "from": "HP_Heater_1.water_out",
+      "to": "Boiler.feedwater_in"
+    },
+    {
+      "from": "HP_Turbine.ext_hp1",
+      "to": "HP_Heater_1.steam_in"
+    },
+    {
+      "from": "HP_Turbine.ext_hp2",
+      "to": "HP_Heater_2.steam_in"
+    },
+    {
+      "from": "HP_Turbine.ext_hp3",
+      "to": "HP_Heater_3.steam_in"
+    },
+    {
+      "from": "IP_Turbine.ext_ip1",
+      "to": "Deaerator.steam_in"
+    },
+    {
+      "from": "IP_Turbine.ext_ip2",
+      "to": "LP_Heater_5.steam_in"
+    },
+    {
+      "from": "LP_Turbine.ext_lp1",
+      "to": "LP_Heater_6.steam_in"
+    },
+    {
+      "from": "LP_Turbine.ext_lp2",
+      "to": "LP_Heater_7.steam_in"
+    },
+    {
+      "from": "LP_Turbine.ext_lp3",
+      "to": "LP_Heater_8.steam_in"
+    },
+    {
+      "from": "HP_Heater_1.drain_out",
+      "to": "HP_Heater_2.drain_in"
+    },
+    {
+      "from": "HP_Heater_2.drain_out",
+      "to": "HP_Heater_3.drain_in"
+    },
+    {
+      "from": "HP_Heater_3.drain_out",
+      "to": "Deaerator.drain_in"
+    },
+    {
+      "from": "LP_Heater_5.drain_out",
+      "to": "LP_Heater_6.drain_in"
+    },
+    {
+      "from": "LP_Heater_6.drain_out",
+      "to": "LP_Heater_7.drain_in"
+    },
+    {
+      "from": "LP_Heater_7.drain_out",
+      "to": "LP_Heater_8.drain_in"
+    },
+    {
+      "from": "HP_Turbine.power_out",
+      "to": "IP_Turbine.power_in"
+    },
+    {
+      "from": "IP_Turbine.power_out",
+      "to": "LP_Turbine.power_in"
+    },
+    {
+      "from": "LP_Turbine.power_out",
+      "to": "Generator.mechanical_in"
+    }
+  ]
+}

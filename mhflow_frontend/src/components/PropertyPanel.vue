@@ -36,13 +36,28 @@
                   <span class="param-help">?</span>
                 </el-tooltip>
               </label>
+              <el-select
+                v-if="paramDef.options"
+                :model-value="selectedComponent.params[paramDef.key]"
+                size="small"
+                class="param-input"
+                @change="(val: string) => onParamChange(paramDef.key, val)"
+              >
+                <el-option
+                  v-for="opt in paramDef.options"
+                  :key="opt.value"
+                  :label="opt.label"
+                  :value="opt.value"
+                />
+              </el-select>
               <el-input-number
+                v-else
                 :model-value="selectedComponent.params[paramDef.key]"
                 size="small"
                 :min="paramDef.min"
                 :max="paramDef.max"
                 :step="paramDef.step"
-                :precision="paramDef.step < 1 ? (paramDef.step < 0.01 ? 3 : paramDef.step < 0.1 ? 2 : 1) : 0"
+                :precision="paramDef.step && paramDef.step < 1 ? (paramDef.step < 0.01 ? 3 : paramDef.step < 0.1 ? 2 : 1) : 0"
                 controls-position="right"
                 class="param-input"
                 @change="(val: number) => onParamChange(paramDef.key, val)"
@@ -60,11 +75,12 @@
                 class="port-detail"
               >
                 <span class="port-name">{{ port.name }}</span>
-                <div class="port-values" v-if="port.t > 0 || port.p > 0">
-                  <span class="port-value">{{ port.p.toFixed(3) }} MPa</span>
-                  <span class="port-value">{{ port.t.toFixed(1) }} °C</span>
-                  <span class="port-value">{{ port.m.toFixed(1) }} kg/s</span>
-                  <span class="port-value">{{ port.h.toFixed(0) }} kJ/kg</span>
+                <div class="port-values" v-if="hasPortValue(port)">
+                  <span v-if="port.p > 0" class="port-value">{{ port.p.toFixed(3) }} MPa</span>
+                  <span v-if="port.t > 0" class="port-value">{{ port.t.toFixed(1) }} °C</span>
+                  <span v-if="port.m > 0" class="port-value">{{ port.m.toFixed(1) }} kg/s</span>
+                  <span v-if="port.h > 0" class="port-value">{{ port.h.toFixed(0) }} kJ/kg</span>
+                  <span v-if="port.w && port.w > 0" class="port-value">{{ port.w.toFixed(0) }} kW</span>
                 </div>
                 <div class="port-values" v-else>
                   <span class="port-value muted">未计算</span>
@@ -79,11 +95,12 @@
                 class="port-detail"
               >
                 <span class="port-name">{{ port.name }}</span>
-                <div class="port-values" v-if="port.t > 0 || port.p > 0">
-                  <span class="port-value">{{ port.p.toFixed(3) }} MPa</span>
-                  <span class="port-value">{{ port.t.toFixed(1) }} °C</span>
-                  <span class="port-value">{{ port.m.toFixed(1) }} kg/s</span>
-                  <span class="port-value">{{ port.h.toFixed(0) }} kJ/kg</span>
+                <div class="port-values" v-if="hasPortValue(port)">
+                  <span v-if="port.p > 0" class="port-value">{{ port.p.toFixed(3) }} MPa</span>
+                  <span v-if="port.t > 0" class="port-value">{{ port.t.toFixed(1) }} °C</span>
+                  <span v-if="port.m > 0" class="port-value">{{ port.m.toFixed(1) }} kg/s</span>
+                  <span v-if="port.h > 0" class="port-value">{{ port.h.toFixed(0) }} kJ/kg</span>
+                  <span v-if="port.w && port.w > 0" class="port-value">{{ port.w.toFixed(0) }} kW</span>
                 </div>
                 <div class="port-values" v-else>
                   <span class="port-value muted">未计算</span>
@@ -356,48 +373,65 @@ function getResultLabel(key: string): string {
     generator_power: '发电机功率',
     w_mechanical: '机械功率',
     w_electrical: '电功率',
+    w_internal: '内功率',
+    w_internal_mw: '内功率(MW)',
+    w_shaft: '轴功率',
+    w_shaft_mw: '轴功率(MW)',
     eta_isen: '等熵效率',
     eta_mech: '机械效率',
     eta_gen: '发电效率',
+    m_steam: '抽汽量',
+    q_water: '水侧吸热量',
+    q_steam: '蒸汽放热量',
+    p_shaft: '泵轴功率',
+    p_motor: '泵电机功率',
+    h_drop_isen: '等熵焓降',
+    h_drop_actual: '实际焓降',
   }
   return labels[key] || key
 }
 
-function formatResultValue(key: string, value: number): string {
-  if (key.includes('power') || key.includes('Power')) {
-    if (value >= 1000) {
-      return `${(value / 1000).toFixed(2)} MW`
+function formatResultValue(key: string, value: any): string {
+  // 防御性转换：处理 numpy 类型、字符串、null 等非原生 number
+  const num = typeof value === 'number' ? value : Number(value)
+  if (!isFinite(num)) {
+    return String(value)
+  }
+
+  if (key.includes('power') || key.includes('Power') || key.includes('_mw')) {
+    if (num >= 1000) {
+      return `${(num / 1000).toFixed(2)} MW`
     }
-    return `${value.toFixed(0)} kW`
+    return `${num.toFixed(0)} kW`
   }
   if (key.includes('efficiency') || key.includes('eta')) {
-    return `${value.toFixed(2)} %`
+    return `${num.toFixed(2)} %`
   }
   if (key.includes('heat_rate')) {
-    return `${value.toFixed(0)} kJ/(kW·h)`
+    return `${num.toFixed(0)} kJ/(kW·h)`
   }
   if (key.includes('coal_consumption')) {
-    return `${value.toFixed(1)} g/(kW·h)`
+    return `${num.toFixed(1)} g/(kW·h)`
   }
   if (key.includes('steam_rate')) {
-    return `${value.toFixed(2)} kg/(kW·h)`
+    return `${num.toFixed(2)} kg/(kW·h)`
   }
-  if (key.includes('enthalpy') || key.includes('h')) {
-    return `${value.toFixed(0)} kJ/kg`
+  if (key.includes('enthalpy') || key.includes('h_') || key.includes('h_drop')) {
+    return `${num.toFixed(0)} kJ/kg`
   }
-  if (key.includes('mass_flow') || key.includes('m')) {
-    return `${value.toFixed(1)} kg/s`
+  if (key.includes('mass_flow') || key === 'm_steam' || key === 'm') {
+    return `${num.toFixed(2)} kg/s`
   }
-  if (key.includes('pressure') || key.includes('p')) {
-    return `${value.toFixed(3)} MPa`
+  if (key.includes('pressure') || key.includes('p_') || key.includes('p_out')) {
+    return `${num.toFixed(3)} MPa`
   }
-  if (key.includes('temperature') || key.includes('t')) {
-    return `${value.toFixed(1)} °C`
+  if (key.includes('temperature') || key.includes('t_')) {
+    return `${num.toFixed(1)} °C`
   }
   if (key.includes('ratio')) {
-    return `${value.toFixed(3)}`
+    return `${num.toFixed(3)}`
   }
-  return `${value.toFixed(2)}`
+  return `${num.toFixed(2)}`
 }
 
 watch(selectedComponent, (comp) => {
@@ -412,7 +446,7 @@ function onNameChange() {
   }
 }
 
-function onParamChange(key: string, value: number) {
+function onParamChange(key: string, value: number | string) {
   if (selectedComponent.value) {
     store.updateComponentParam(selectedComponent.value.id, key, value)
   }
@@ -424,9 +458,19 @@ function onDeleteComponent() {
   }
 }
 
+function hasPortValue(port: any): boolean {
+  // 功率端口检查 w 字段
+  if (port.name?.includes('power') && port.w !== undefined) {
+    return port.w !== 0
+  }
+  // 普通端口检查 p/t/m/h
+  return (port.p > 0 || port.t > 0 || port.m > 0 || port.h > 0)
+}
+
 function getComponentColor(type: string): string {
   const colors: Record<string, string> = {
     boiler: '#e74c3c',
+    turbine: '#3498db',
     turbine_hp: '#3498db',
     turbine_ip: '#2980b9',
     turbine_lp: '#1a5276',
@@ -442,6 +486,7 @@ function getComponentColor(type: string): string {
 function getTypeLabel(type: string): string {
   const labels: Record<string, string> = {
     boiler: '锅炉',
+    turbine: '汽轮机',
     turbine_hp: '高压缸',
     turbine_ip: '中压缸',
     turbine_lp: '低压缸',

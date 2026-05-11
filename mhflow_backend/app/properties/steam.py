@@ -322,6 +322,29 @@ def _ps_to_t_fallback(p_mpa: float, s_kjkgk: float) -> float:
         return t_sat
 
 
+def ps_to_h(p_mpa: float, s_kjkgk: float) -> float:
+    """
+    由压力和比熵求比焓
+
+    参数:
+        p_mpa: 压力 (MPa)
+        s_kjkgk: 比熵 (kJ/(kg·K))
+
+    返回:
+        比焓 (kJ/kg)
+    """
+    if IAPWS_AVAILABLE:
+        try:
+            sub = IAPWS97(P=p_mpa, s=s_kjkgk)
+            return sub.h
+        except Exception:
+            pass
+
+    # fallback: 由 _ps_to_t_fallback 求温度，再查 pt_to_h
+    t_fallback = _ps_to_t_fallback(p_mpa, s_kjkgk)
+    return pt_to_h(p_mpa, t_fallback)
+
+
 def ps_to_s(p_mpa: float, t_c: float) -> float:
     """
     由压力和温度求比熵 (统一接口)

@@ -1,7 +1,0 @@
-export { default as BoilerIcon } from './BoilerIcon.vue'
-export { default as TurbineIcon } from './TurbineIcon.vue'
-export { default as CondenserIcon } from './CondenserIcon.vue'
-export { default as HeaterIcon } from './HeaterIcon.vue'
-export { default as PumpIcon } from './PumpIcon.vue'
-export { default as PipeIcon } from './PipeIcon.vue'
-export { default as GeneratorIcon } from './GeneratorIcon.vue'

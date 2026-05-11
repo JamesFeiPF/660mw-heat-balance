@@ -105,6 +105,7 @@ class Boiler(BaseComponent):
         t_rh_out = self.params.get("reheat_temperature", self.params.get("t_reheat_out", 610.0))
         eta_boiler = self.params.get("boiler_efficiency", self.params.get("eta_boiler", 95.0)) / 100.0
         fuel_lhv = self.params.get("fuel_lower_heating_value", self.params.get("fuel_lhv", 21000.0))
+        blowdown_rate = self.params.get("blowdown_rate", 1.0) / 100.0  # 转换为小数
         
         # 再热出口压力 = 再热入口压力 - 压降
         reheat_pressure_drop = self.params.get("reheat_pressure_drop", 0.3)
@@ -119,12 +120,15 @@ class Boiler(BaseComponent):
         m_fw = fw_in.get("m", 0.0)
         h_fw = fw_in.get("h", 0.0)
 
+        # 主蒸汽流量 = 给水流量 × (1 - 排污率)
+        m_steam = m_fw * (1.0 - blowdown_rate)
+
         # 主蒸汽出口
         h_steam_out = pt_to_h(p_out, t_out)
         s_steam_out = pt_to_s(p_out, t_out)
 
         # 主蒸汽热负荷
-        q_main = m_fw * (h_steam_out - h_fw)
+        q_main = m_steam * (h_steam_out - h_fw)
 
         # 再热蒸汽
         q_reheat = 0.0
@@ -164,7 +168,7 @@ class Boiler(BaseComponent):
             "t": t_out,
             "h": h_steam_out,
             "s": s_steam_out,
-            "m": m_fw,
+            "m": m_steam,
         })
 
         if rh_in is not None and rh_in.get("m", 0.0) > 0:

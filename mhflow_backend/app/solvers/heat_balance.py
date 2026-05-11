@@ -166,8 +166,8 @@ class HeatBalanceSolver:
             # === 内层：加热器热平衡迭代 ===
             self._inner_heater_iteration()
 
-            # === 检查收敛 ===
-            if self._check_convergence():
+            # === 检查收敛（至少3次迭代，确保汽轮机-锅炉循环稳定）===
+            if outer_iter >= 2 and self._check_convergence():
                 self.converged = True
                 logger.info(f"在第 {outer_iter + 1} 次外层迭代后收敛")
                 break
@@ -182,7 +182,7 @@ class HeatBalanceSolver:
         """
         外层：汽轮机通流计算
         
-        计算顺序：锅炉 → 汽轮机各级（高→中→低压缸）
+        计算顺序：锅炉 → 同步连接 → 汽轮机各级（高→中→低压缸）→ 同步连接
         """
         logger.debug("  执行汽轮机通流计算")
 
@@ -193,7 +193,10 @@ class HeatBalanceSolver:
             boiler.calculate()
             logger.debug(f"    锅炉计算完成: {boiler.name}")
 
-        # 2. 计算汽轮机（按压力等级从高到低）
+        # 2. 同步连接：将锅炉出口同步到汽轮机入口
+        self._sync_connections()
+
+        # 3. 计算汽轮机（按压力等级从高到低）
         turbines = [comp for name, comp in self.components.items() if comp.component_type == "turbine"]
         # 按蒸汽流动顺序计算：高压缸 → 中压缸 → 低压缸
         sorted_turbines = sorted(turbines, key=lambda t: t.params.get("p_out", 0), reverse=True)
@@ -205,6 +208,29 @@ class HeatBalanceSolver:
             # 更新抽汽量估计
             self._update_turbine_extractions(turbine)
             logger.debug(f"    汽轮机计算完成: {turbine.name}, p_out={turbine.params.get('p_out', 0):.3f} MPa")
+
+        # 4. 再次同步连接：将汽轮机出口同步到下游（锅炉再热入口、凝汽器等）
+        self._sync_connections()
+
+    def _sync_connections(self):
+        """同步所有连接：将上游组件出口端口的最新值复制到下游组件入口端口"""
+        for conn in self.connections:
+            source = conn.get("from", "")
+            target = conn.get("to", "")
+            if not source or not target:
+                continue
+            src_parts = source.split(".")
+            tgt_parts = target.split(".")
+            if len(src_parts) != 2 or len(tgt_parts) != 2:
+                continue
+            src_comp_name, src_port_name = src_parts
+            tgt_comp_name, tgt_port_name = tgt_parts
+            src_comp = self.components.get(src_comp_name)
+            tgt_comp = self.components.get(tgt_comp_name)
+            if src_comp and tgt_comp:
+                src_port = src_comp.get_outlet(src_port_name)
+                if src_port and src_port.get("h", 0) > 0:
+                    tgt_comp.set_inlet(tgt_port_name, src_port)
 
     def _inner_heater_iteration(self):
         """
@@ -362,29 +388,103 @@ class HeatBalanceSolver:
                 self.current_power += comp.results.get("w_internal", 0.0)
 
     def _update_extraction_shares(self):
-        """更新抽汽份额估计（简化版：根据加热器热负荷调整）"""
-        total_heat_load = 0.0
-        extraction_adjustments: Dict[str, float] = {}
+        """更新抽汽份额估计（精确版：由加热器热平衡反推）
 
+        每个加热器计算完成后，results['m_steam'] 即为该加热器精确所需的蒸汽量。
+        将此值反馈回对应汽轮机的抽汽份额，实现抽汽量的精确迭代。
+        """
+        damping = 0.5  # 阻尼因子，防止震荡
+
+        # 收集每个加热器所需的抽汽量（包括 m_steam=0，以关闭多余抽汽）
+        heater_steam_demand: Dict[str, float] = {}
         for name, comp in self.components.items():
             if comp.component_type == "heater" and hasattr(comp, 'results') and comp.results:
-                heat_load = comp.results.get("q_heat", 0.0)
-                total_heat_load += heat_load
-                extraction_adjustments[name] = heat_load
+                m_steam = comp.results.get("m_steam", 0.0)
+                heater_steam_demand[name] = max(0.0, m_steam)
 
-        # 根据热负荷比例调整抽汽量
-        if total_heat_load > 0:
-            for name, comp in self.components.items():
-                if comp.component_type == "heater" and hasattr(comp, 'results') and comp.results:
-                    heat_load = comp.results.get("q_heat", 0.0)
-                    ratio = heat_load / total_heat_load
-                    # 简单调整抽汽量
-                    if ratio > 0:
-                        current_ext_m = comp.results.get("extraction_mass", 0.0)
-                        target_ext_m = self.main_steam_flow * ratio * 0.3  # 经验系数
-                        # 阻尼更新
-                        new_ext_m = current_ext_m + 0.3 * (target_ext_m - current_ext_m)
-                        comp.results["extraction_mass"] = max(0.0, new_ext_m)
+        # 辅助函数：通过连接关系找到加热器 steam_in 对应的汽轮机抽汽点
+        def _find_extraction_by_connection(heater_name: str):
+            target_key = f"{heater_name}.steam_in"
+            for conn in self.connections:
+                if conn.get("to", "") == target_key:
+                    source = conn.get("from", "")
+                    parts = source.split(".")
+                    if len(parts) == 2:
+                        src_comp = self.components.get(parts[0])
+                        if src_comp and src_comp.component_type == "turbine":
+                            return src_comp, parts[1]
+            return None, None
+
+        # 将加热器所需蒸汽量映射到汽轮机抽汽点
+        for heater_name, demand_m in heater_steam_demand.items():
+            heater = self.components.get(heater_name)
+            if not heater:
+                continue
+
+            # 优先通过连接关系精确匹配
+            turbine, ext_name = _find_extraction_by_connection(heater_name)
+            if turbine and ext_name:
+                extractions = turbine.results.get("extractions", [])
+                for ext in extractions:
+                    if ext.get("name") == ext_name:
+                        current_m = ext.get("m", 0.0)
+                        # 限制demand_m不超过模板m_frac的3倍，防止加热器模型异常导致抽汽量过大
+                        m_frac_limit = 0.0
+                        for ep in turbine.params.get("extractions", []):
+                            if ep.get("name") == ext_name:
+                                m_frac_limit = ep.get("m_frac", 0.0)
+                                break
+                        if m_frac_limit > 0:
+                            max_demand = m_frac_limit * self.main_steam_flow * 3.0
+                            demand_m = min(demand_m, max_demand)
+                        new_m = current_m + damping * (demand_m - current_m)
+                        ext["m"] = max(0.0, new_m)
+                        # 同步更新 m_frac
+                        m_frac = new_m / max(self.main_steam_flow, 1.0)
+                        for ep in turbine.params.get("extractions", []):
+                            if ep.get("name") == ext_name:
+                                ep["m_frac"] = m_frac
+                                break
+                        break
+                continue
+
+            # 回退：通过压力匹配（用于无直接连接的加热器）
+            p_heater = heater.params.get("p_heater", 0.0)
+            if p_heater <= 1.0:
+                tolerance = min(0.03, p_heater * 0.2)
+            else:
+                tolerance = 0.5
+
+            for _t_name, turbine in self.components.items():
+                if turbine.component_type != "turbine":
+                    continue
+                if not hasattr(turbine, 'results') or not turbine.results:
+                    continue
+
+                extractions = turbine.results.get("extractions", [])
+                best_ext = None
+                best_diff = float('inf')
+                for ext in extractions:
+                    ext_p = ext.get("p", 0.0)
+                    diff = abs(ext_p - p_heater)
+                    if diff < tolerance and diff < best_diff:
+                        best_diff = diff
+                        best_ext = ext
+
+                if best_ext is not None:
+                    current_m = best_ext.get("m", 0.0)
+                    new_m = current_m + damping * (demand_m - current_m)
+                    best_ext["m"] = max(0.0, new_m)
+                    m_frac = new_m / max(self.main_steam_flow, 1.0)
+                    ext_p_match = best_ext.get("p", 0.0)
+                    for ep in turbine.params.get("extraction_points", []):
+                        if abs(ep.get("p", 0.0) - ext_p_match) < tolerance:
+                            ep["m_frac"] = m_frac
+                            break
+                    for ep in turbine.params.get("extractions", []):
+                        if abs(ep.get("p", 0.0) - ext_p_match) < tolerance:
+                            ep["m_frac"] = m_frac
+                            break
 
     def _setup_boiler_inputs(self, boiler: Boiler):
         """设置锅炉入口参数"""
@@ -437,11 +537,13 @@ class HeatBalanceSolver:
                 "m": self.main_steam_flow,
             })
 
-        # 蒸汽入口: 从汽轮机抽汽获取
+        # 蒸汽入口: 优先从连接关系获取，其次按压力匹配汽轮机抽汽
         p_heater = heater.params.get("p_heater", 1.0)
         sat_props = saturation_properties(p_heater)
         
-        steam_source = self._find_turbine_extraction(p_heater)
+        steam_source = self._find_upstream(heater.name, "steam_in")
+        if not steam_source:
+            steam_source = self._find_turbine_extraction(p_heater)
         if steam_source:
             heater.set_inlet("steam_in", steam_source)
         else:
@@ -514,13 +616,30 @@ class HeatBalanceSolver:
         return None
 
     def _find_turbine_extraction(self, target_pressure: float) -> Optional[Dict[str, Any]]:
-        """查找匹配压力的汽轮机抽汽"""
+        """查找匹配压力的汽轮机抽汽
+
+        修正: 低压区使用更小的压力容差，避免错误匹配。
+        例如 target=0.08MPa 时，0.25MPa 的抽汽不应被匹配。
+        """
+        # 根据目标压力确定容差: 低压区(<1MPa)用 0.03MPa 或 20%相对容差，高压区用 0.5MPa
+        if target_pressure <= 1.0:
+            tolerance = min(0.03, target_pressure * 0.2)
+        else:
+            tolerance = 0.5
+
+        best_match = None
+        best_diff = float('inf')
+
         for name, comp in self.components.items():
             if comp.component_type == "turbine" and hasattr(comp, 'results') and comp.results:
                 for ext in comp.results.get("extractions", []):
-                    if abs(ext.get("p", 0) - target_pressure) < 0.5:  # 压力容差
-                        return ext
-        return None
+                    ext_p = ext.get("p", 0.0)
+                    diff = abs(ext_p - target_pressure)
+                    if diff < tolerance and diff < best_diff:
+                        best_diff = diff
+                        best_match = ext
+
+        return best_match
 
     def _get_component_by_type(self, comp_type: str) -> Optional[BaseComponent]:
         """根据类型获取元件"""
@@ -544,10 +663,17 @@ class HeatBalanceSolver:
         }
 
     def _calculate_system_performance(self):
-        """计算系统性能指标"""
+        """计算系统性能指标
+
+        修正要点:
+        1. 汽轮机功率统一汇总（HP→IP→LP 轴功率求和）
+        2. 扣除给水泵和凝结水泵功耗
+        3. 使用各设备自身参数中的效率值
+        """
         boiler_results = {}
         turbine_results = {}
         generator_results = {}
+        pump_results = {}
 
         for name, comp in self.components.items():
             if comp.component_type == "boiler" and hasattr(comp, 'results') and comp.results:
@@ -556,42 +682,65 @@ class HeatBalanceSolver:
                 turbine_results[name] = comp.results
             elif comp.component_type == "generator" and hasattr(comp, 'results') and comp.results:
                 generator_results[name] = comp.results
+            elif comp.component_type == "pump" and hasattr(comp, 'results') and comp.results:
+                pump_results[name] = comp.results
 
-        # 汽轮机总内功率
+        # 汽轮机总内功率（所有缸体之和）
         w_turbine_internal = sum(res.get("w_internal", 0.0) for res in turbine_results.values())
+        # 汽轮机总轴功率（已扣除机械损失）
+        w_turbine_shaft = sum(res.get("w_shaft", 0.0) for res in turbine_results.values())
 
         # 锅炉总热负荷
         q_boiler = sum(res.get("q_total", 0.0) for res in boiler_results.values())
-        eta_boiler = next((res.get("eta_boiler", 0.93) for res in boiler_results.values()), 0.93)
+        eta_boiler = next((res.get("eta_boiler", 93.0) for res in boiler_results.values()), 93.0) / 100.0
 
-        # 发电机输出功率（考虑机械效率和发电机效率）
-        eta_mech = 0.995
-        eta_gen = 0.985
-        w_electrical = w_turbine_internal * eta_mech * eta_gen
+        # 泵总功耗（仅电机驱动的泵；给水泵通常由小汽轮机驱动，不计入厂用电）
+        pump_power_total = sum(
+            res.get("p_motor", 0.0)
+            for name, res in pump_results.items()
+            if "feed" not in name.lower()
+        )
 
-        # 热耗率
-        heat_rate = q_boiler / w_electrical * 3600 if w_electrical > 0 else 0.0
+        # 发电机参数（从Generator组件获取，否则使用默认值）
+        gen_params = next((comp.params for comp in self.components.values() if comp.component_type == "generator"), {})
+        eta_mech = gen_params.get("eta_mech", 0.995)
+        eta_gen = gen_params.get("eta_gen", 0.995)
+        # 发电机输入 = 汽轮机总轴功率
+        w_generator_input = w_turbine_shaft
+        w_electrical_gross = w_generator_input * eta_mech * eta_gen
+        # 净发电功率（扣除泵功耗）
+        w_electrical_net = w_electrical_gross - pump_power_total
 
-        # 全厂热效率
-        eta_plant = w_electrical / q_boiler if q_boiler > 0 else 0.0
+        # 热耗率（基于毛功率）
+        heat_rate = q_boiler / w_electrical_gross * 3600 if w_electrical_gross > 0 else 0.0
+
+        # 全厂热效率（基于净功率）
+        eta_plant = w_electrical_net / q_boiler if q_boiler > 0 else 0.0
 
         # 标准煤耗率
         coal_lhv = 29308.0
-        coal_consumption_rate = heat_rate / coal_lhv * 1000 if w_electrical > 0 else 0.0
+        coal_consumption_rate = heat_rate / coal_lhv * 1000 if w_electrical_gross > 0 else 0.0
 
         # 汽耗率
-        steam_rate = self.main_steam_flow * 3600 / w_electrical if w_electrical > 0 else 0.0
+        steam_rate = self.main_steam_flow * 3600 / w_electrical_gross if w_electrical_gross > 0 else 0.0
+
+        # 厂用电率估算
+        auxiliary_power_rate = (pump_power_total / w_electrical_gross * 100) if w_electrical_gross > 0 else 0.0
 
         performance = {
-            "w_electrical_mw": round(w_electrical / 1000.0, 2),
-            "w_electrical_kw": round(w_electrical, 2),
+            "w_electrical_mw": round(w_electrical_net / 1000.0, 2),
+            "w_electrical_gross_mw": round(w_electrical_gross / 1000.0, 2),
+            "w_electrical_kw": round(w_electrical_net, 2),
             "w_turbine_internal_mw": round(w_turbine_internal / 1000.0, 2),
+            "w_turbine_shaft_mw": round(w_turbine_shaft / 1000.0, 2),
+            "pump_power_mw": round(pump_power_total / 1000.0, 2),
             "q_boiler_mw": round(q_boiler / 1000.0, 2),
             "heat_rate_kj_kwh": round(heat_rate, 2),
             "eta_boiler": round(eta_boiler, 4),
             "eta_plant": round(eta_plant, 4),
             "coal_consumption_rate_g_kwh": round(coal_consumption_rate, 2),
             "steam_rate_kg_kwh": round(steam_rate, 4),
+            "auxiliary_power_rate": round(auxiliary_power_rate, 2),
             "main_steam_flow_kg_s": round(self.main_steam_flow, 2),
             "main_steam_flow_t_h": round(self.main_steam_flow * 3.6, 2),
         }

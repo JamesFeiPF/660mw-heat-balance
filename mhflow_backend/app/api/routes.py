@@ -6,6 +6,7 @@ import json
 import logging
 import os
 from typing import Dict, Any, Optional
+from datetime import datetime
 
 from fastapi import APIRouter, HTTPException, Query
 from pydantic import BaseModel, Field
@@ -18,6 +19,9 @@ from app.properties.steam import (
 from app.templates import get_template, list_templates
 from app.solvers.heat_balance import HeatBalanceSolver
 from app.config import get_settings
+from app.validators import validate_model
+from app.exporters import PDFExporter, ExcelExporter
+from fastapi.responses import StreamingResponse
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api", tags=["MHFlow"])
@@ -101,16 +105,74 @@ async def get_templates():
     }
 
 
+@router.get("/model/list-saved")
+async def list_saved_models():
+    """
+    获取已保存的模型列表
+
+    返回 models_data 目录中所有 .json 模型文件。
+    """
+    try:
+        settings = get_settings()
+        model_dir = settings.MODEL_DIR
+        models = []
+        if os.path.isdir(model_dir):
+            for fname in os.listdir(model_dir):
+                if fname.endswith(".json"):
+                    fpath = os.path.join(model_dir, fname)
+                    try:
+                        with open(fpath, "r", encoding="utf-8") as f:
+                            data = json.load(f)
+                        models.append({
+                            "model_id": fname[:-5],
+                            "name": data.get("name", fname[:-5]),
+                            "description": data.get("description", ""),
+                            "component_count": len(data.get("components", [])),
+                            "connection_count": len(data.get("connections", [])),
+                            "file_path": fpath,
+                        })
+                    except Exception:
+                        pass
+        return {
+            "models": models,
+            "count": len(models),
+        }
+    except Exception as e:
+        logger.error(f"列出模型失败: {e}")
+        raise HTTPException(status_code=500, detail=f"列出模型失败: {str(e)}")
+
+
+def _load_model_from_file(model_id: str) -> Optional[Dict[str, Any]]:
+    """从 models_data 目录加载已保存的JSON模型"""
+    settings = get_settings()
+    file_path = os.path.join(settings.MODEL_DIR, f"{model_id}.json")
+    if os.path.exists(file_path):
+        with open(file_path, "r", encoding="utf-8") as f:
+            return json.load(f)
+    return None
+
+
 @router.post("/model/load")
 async def load_model(request: ModelLoadRequest):
     """
-    加载模板模型
+    加载模型
 
-    根据模板ID加载预定义的热力系统模型，
-    可选地覆盖部分参数。
+    支持两种模式：
+    1. 模板ID: 从内置模板加载（如 plant_600mw）
+    2. 已保存模型: 从 models_data 目录加载 .json 文件
     """
     try:
-        model_data = get_template(request.template_id)
+        # 先尝试加载内置模板
+        try:
+            model_data = get_template(request.template_id)
+        except ValueError:
+            # 如果不是模板ID，尝试从文件加载
+            model_data = _load_model_from_file(request.template_id)
+            if model_data is None:
+                raise HTTPException(
+                    status_code=404,
+                    detail=f"未找到模板或模型: {request.template_id}"
+                )
 
         # 应用自定义参数
         if request.custom_params:
@@ -128,8 +190,8 @@ async def load_model(request: ModelLoadRequest):
             "connection_count": len(model_data.get("connections", [])),
             "model_data": model_data,
         }
-    except ValueError as e:
-        raise HTTPException(status_code=404, detail=str(e))
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error(f"加载模型失败: {e}")
         raise HTTPException(status_code=500, detail=f"加载模型失败: {str(e)}")
@@ -232,6 +294,14 @@ async def solve(request: SolveRequest):
                 detail="请提供 model_data 或 model_id",
             )
 
+        # 验证模型
+        is_valid, errors = validate_model(model_data)
+        if not is_valid:
+            raise HTTPException(
+                status_code=400,
+                detail=f"模型验证失败: {'; '.join(errors)}"
+            )
+
         # 创建求解器
         settings = get_settings()
         solver = HeatBalanceSolver(
@@ -330,6 +400,186 @@ async def query_saturation_properties(
     except Exception as e:
         logger.error(f"饱和参数查询失败: {e}")
         raise HTTPException(status_code=500, detail=f"饱和参数查询失败: {str(e)}")
+
+
+# ============================================================
+# 导出路由
+# ============================================================
+
+class ExportRequest(BaseModel):
+    """导出请求"""
+    model: Optional[Dict[str, Any]] = Field(None, description="模型数据")
+    result: Optional[Dict[str, Any]] = Field(None, description="计算结果")
+
+
+def _normalize_export_results(result: Dict[str, Any]) -> Dict[str, Any]:
+    """
+    将前端格式的计算结果转换为导出器期望的后端格式。
+
+    前端格式 (SolveResult):
+        {
+            "success": bool,
+            "message": str,
+            "components": [  // 数组
+                {"id": ..., "name": ..., "type": ..., "inlet_ports": [...], "outlet_ports": [...], "extra_params": {...}}
+            ],
+            "summary": {
+                "power_output": float,
+                "thermal_efficiency": float,   // %
+                "heat_rate": float,
+                "coal_consumption": float,
+                "steam_rate": float,
+                "auxiliary_power_rate": float, // %
+            }
+        }
+
+    后端格式 (solver.results):
+        {
+            "converged": bool,
+            "iteration_count": int,
+            "components": {  // 字典
+                "Boiler": {"component_type": ..., "results": {...}, "outlet_ports": [...], "inlet_ports": [...]}
+            },
+            "system_performance": {
+                "w_electrical_mw": float,
+                "eta_plant": float,              // 小数
+                "heat_rate_kj_kwh": float,
+                ...
+            }
+        }
+    """
+    if result is None:
+        return {}
+
+    # 如果已经是后端格式（components 是 dict），直接返回
+    components = result.get("components")
+    if isinstance(components, dict):
+        return result
+
+    # 否则按前端格式进行转换
+    normalized: Dict[str, Any] = {}
+
+    # 基本字段映射
+    normalized["converged"] = result.get("success", False)
+    normalized["iteration_count"] = 0
+
+    # components: list -> dict
+    comp_dict: Dict[str, Any] = {}
+    if isinstance(components, list):
+        for comp in components:
+            if not isinstance(comp, dict):
+                continue
+            name = comp.get("name") or comp.get("id", "unknown")
+            comp_dict[name] = {
+                "component_type": comp.get("type", ""),
+                "results": comp.get("extra_params", {}),
+                "inlet_ports": comp.get("inlet_ports", []),
+                "outlet_ports": comp.get("outlet_ports", []),
+            }
+    normalized["components"] = comp_dict
+
+    # summary -> system_performance
+    summary = result.get("summary", {})
+    if isinstance(summary, dict):
+        normalized["system_performance"] = {
+            "w_electrical_mw": summary.get("power_output", 0),
+            "w_turbine_internal_mw": 0,
+            "q_boiler_mw": 0,
+            "heat_rate_kj_kwh": summary.get("heat_rate", 0),
+            "eta_boiler": 0,
+            "eta_plant": (summary.get("thermal_efficiency", 0) / 100.0),
+            "coal_consumption_rate_g_kwh": summary.get("coal_consumption", 0),
+            "steam_rate_kg_kwh": summary.get("steam_rate", 0),
+            "main_steam_flow_t_h": 0,
+            "annual_generation_mwh": 0,
+            "annual_coal_tons": 0,
+        }
+    else:
+        normalized["system_performance"] = {}
+
+    return normalized
+
+
+def _normalize_export_model(model: Dict[str, Any]) -> Dict[str, Any]:
+    """将前端格式的模型数据转换为导出器期望的格式"""
+    if model is None:
+        return {}
+
+    # 如果已经有 name 字段，说明可能是后端模板格式
+    if "name" in model:
+        return model
+
+    # 前端 SystemModel 只有 components 和 connections
+    # 尝试从 components 中推断模型名称或返回默认值
+    normalized = dict(model)
+    normalized.setdefault("name", "MHFlow Model")
+    normalized.setdefault("description", "")
+    return normalized
+
+
+@router.post("/export/pdf")
+async def export_pdf(request: ExportRequest):
+    """
+    导出PDF报告
+
+    将模型和计算结果导出为PDF格式的报告。
+    """
+    try:
+        if not request.result:
+            raise HTTPException(status_code=400, detail="请提供计算结果 result")
+
+        results = _normalize_export_results(request.result)
+        model_data = _normalize_export_model(request.model or {})
+
+        exporter = PDFExporter(results=results, model_data=model_data)
+        pdf_data = exporter.export()
+
+        from io import BytesIO
+        buffer = BytesIO(pdf_data)
+        filename = f"mhflow_report_{datetime.now().strftime('%Y%m%d_%H%M%S')}.pdf"
+        return StreamingResponse(
+            buffer,
+            media_type="application/pdf",
+            headers={"Content-Disposition": f"attachment; filename={filename}"},
+        )
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"PDF导出失败: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=f"PDF导出失败: {str(e)}")
+
+
+@router.post("/export/excel")
+async def export_excel(request: ExportRequest):
+    """
+    导出Excel报告
+
+    将模型和计算结果导出为Excel格式的工作簿，
+    包含概览、系统性能、元件结果、节点参数等sheet。
+    """
+    try:
+        if not request.result:
+            raise HTTPException(status_code=400, detail="请提供计算结果 result")
+
+        results = _normalize_export_results(request.result)
+        model_data = _normalize_export_model(request.model or {})
+
+        exporter = ExcelExporter(results=results, model_data=model_data)
+        excel_data = exporter.export()
+
+        from io import BytesIO
+        buffer = BytesIO(excel_data)
+        filename = f"mhflow_data_{datetime.now().strftime('%Y%m%d_%H%M%S')}.xlsx"
+        return StreamingResponse(
+            buffer,
+            media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            headers={"Content-Disposition": f"attachment; filename={filename}"},
+        )
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Excel导出失败: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=f"Excel导出失败: {str(e)}")
 
 
 # ============================================================

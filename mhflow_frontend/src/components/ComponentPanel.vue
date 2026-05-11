@@ -75,7 +75,7 @@ function onAddComponent(type: ComponentType) {
   const x = 300 + Math.random() * 200
   const y = 150 + Math.random() * 200
   const comp = store.addComponent(type, Math.round(x), Math.round(y))
-  store.selectComponent(comp.id)
+  if (comp) store.selectComponent(comp.id)
 }
 
 function onClearAll() {

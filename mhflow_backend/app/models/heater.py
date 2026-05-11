@@ -72,7 +72,7 @@ class Heater(BaseComponent):
             "eta": 0.99,
             "p_heater": 1.0,  # 加热器压力 MPa
             "p_water_out": 1.0,
-            "hp_ttd": -1.7,  # 高加上端差 °C
+            "hp_ttd": 3.0,  # 高加上端差 °C
             "hp_dca": 5.0,  # 高加下端差/过冷度 °C
             "lp_ttd": 2.8,  # 低加上端差 °C
             "lp_dca": 5.0,  # 低加下端差/过冷度 °C
@@ -153,12 +153,24 @@ class Heater(BaseComponent):
         h_g = sat_props['h_g']
         s_f = sat_props['s_f']
 
+        # 端差校验: 表面式加热器不允许负端差
+        if heater_type != "DA" and ttd < 0:
+            import logging
+            logging.getLogger(__name__).warning(
+                f"加热器 {self.name}: 端差 {ttd}°C 为负值，物理上不可能，已取绝对值 {abs(ttd)}°C"
+            )
+            ttd = abs(ttd)
+
         if heater_type == "DA":
             # 混合式加热器（除氧器）
+            # 除氧器使用自身工作压力计算饱和参数，而非蒸汽入口压力
+            p_da = self.params.get("p_heater", 1.0)
+            sat_props_da = saturation_properties(p_da)
             return self._calculate_da(
                 m_water, h_water_in, h_steam,
                 m_drain_in, h_drain_in,
-                t_sat, h_f, s_f, p_heater_actual, p_water_out, eta,
+                sat_props_da['t_sat'], sat_props_da['h_f'], sat_props_da['s_f'],
+                p_da, p_water_out, eta,
             )
         else:
             # 表面式加热器（高加/低加）
@@ -260,10 +272,11 @@ class Heater(BaseComponent):
         t_water_out = t_sat
 
         # 热平衡: m_steam * h_steam + m_drain_in * h_drain_in + m_water * h_water_in
-        #         = (m_steam + m_drain_in + m_water) * h_water_out / eta
-        # 求解 m_steam
-        # m_steam * (h_steam - h_water_out) = m_water * (h_water_out - h_water_in) / eta - m_drain_in * (h_drain_in - h_water_out)
-        q_water = m_water * (h_water_out - h_water_in) / eta
+        #         = (m_steam + m_drain_in + m_water) * h_water_out
+        # 除氧器为混合式加热器，无传热端差，效率≈100%
+        # 求解 m_steam:
+        # m_steam * (h_steam - h_water_out) = m_water * (h_water_out - h_water_in) - m_drain_in * (h_drain_in - h_water_out)
+        q_water = m_water * (h_water_out - h_water_in)
         q_drain = m_drain_in * (h_drain_in - h_water_out) if m_drain_in > 0 else 0.0
 
         dh_steam = h_steam - h_water_out
@@ -273,6 +286,12 @@ class Heater(BaseComponent):
             m_steam = 0.0
 
         m_steam = max(m_steam, 0.0)
+
+        # 如果不需要蒸汽，重新计算出口参数（基于实际混合焓）
+        if m_steam == 0.0 and (m_water + m_drain_in) > 0:
+            total_m = m_water + m_drain_in
+            h_water_out = (m_water * h_water_in + m_drain_in * h_drain_in) / total_m
+            t_water_out = ph_to_t(p_water_out, h_water_out)
 
         # 出口总水量
         m_water_out = m_water + m_steam + m_drain_in

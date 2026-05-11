@@ -41,14 +41,16 @@ export interface ComponentParamDef {
   key: string
   label: string
   unit: string
-  default: number
-  min: number
-  max: number
-  step: number
+  default: number | string
+  min?: number
+  max?: number
+  step?: number
   /** 是否为必填参数（黄色标记） */
   required?: boolean
   /** 参数说明 */
   description?: string
+  /** 下拉选项（存在时渲染为选择器） */
+  options?: { label: string; value: string }[]
 }
 
 /** 元件接口 */

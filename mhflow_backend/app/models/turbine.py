@@ -175,34 +175,47 @@ class Turbine(BaseComponent):
         )
 
     def _calculate_isentropic_enthalpy(self, p_out: float, s_in: float, h_in: float) -> float:
-        """计算等熵出口焓"""
-        try:
-            sat_props = saturation_properties(p_out)
-            s_f = sat_props['s_f']
-            s_g = sat_props['s_g']
-            h_f = sat_props['h_f']
-            h_g = sat_props['h_g']
+        """计算等熵出口焓
 
-            if s_in >= s_g:
-                # 过热区等熵膨胀 - 使用线性插值
-                if s_g > s_f:
-                    h_out_is = h_g + (s_in - s_g) * (h_g - h_f) / max(s_g - s_f, 1e-10)
-                else:
-                    h_out_is = h_g * 0.95  # 粗略估计
-            elif s_in <= s_f:
-                h_out_is = h_f
-            else:
-                # 两相区
-                x_is = (s_in - s_f) / max(s_g - s_f, 1e-10)
-                h_out_is = h_f + x_is * (h_g - h_f)
+        使用 IAPWS-IF97 在出口压力下按 s=s_in 精确求解。
+        等熵膨胀是 s=常数 的过程，必须查相同熵值对应的焓，
+        不能用饱和点线性插值（过热区等熵线非直线）。
+        """
+        from app.properties.steam import ps_to_h
+        try:
+            h_out_is = ps_to_h(p_out, s_in)
         except Exception:
-            # 简化: 假设等熵焓降
-            h_out_is = h_in - 0.8 * (h_in - 2000)
+            # 仅在 IAPWS 不可用时使用简化 fallback
+            try:
+                sat_props = saturation_properties(p_out)
+                s_f = sat_props['s_f']
+                s_g = sat_props['s_g']
+                h_f = sat_props['h_f']
+                h_g = sat_props['h_g']
+
+                if s_in >= s_g:
+                    # 过热区: 用比热近似
+                    h_out_is = h_g + (s_in - s_g) * 50.0
+                elif s_in <= s_f:
+                    h_out_is = h_f
+                else:
+                    # 两相区
+                    x_is = (s_in - s_f) / max(s_g - s_f, 1e-10)
+                    h_out_is = h_f + x_is * (h_g - h_f)
+            except Exception:
+                h_out_is = h_in - 0.8 * (h_in - 2000)
 
         return h_out_is
 
     def _calculate_traditional(self, eta_isen, p_out, stage, p_in, t_in, h_in, m_in, s_in, h_out_is, h_out_final, w_in=0.0):
-        """传统单段计算模式"""
+        """传统单段计算模式
+
+        修正要点:
+        1. 抽汽焓按 s=const 做等熵膨胀精确计算，不再用压力比例近似
+        2. 功率按实际抽汽焓逐段累计
+        """
+        from app.properties.steam import ps_to_h, ph_to_t, ph_to_s
+
         t_out = ph_to_t(p_out, h_out_final)
         s_out = ph_to_s(p_out, h_out_final)
 
@@ -221,10 +234,19 @@ class Turbine(BaseComponent):
             m_extraction_total += ext_m
             m_remaining -= ext_m
 
-            # 抽汽焓计算
+            # 抽汽焓计算: 在抽汽压力下按 s=s_in 做等熵膨胀
             if p_in > ext_p > p_out:
-                frac = (p_in - ext_p) / max(p_in - p_out, 1e-10)
-                h_ext = h_in - frac * eta_isen * (h_in - h_out_is)
+                try:
+                    h_ext_is = ps_to_h(ext_p, s_in)
+                except Exception:
+                    # fallback: 用总焓降比例估算（保留旧逻辑作为安全网）
+                    frac = (p_in - ext_p) / max(p_in - p_out, 1e-10)
+                    h_ext_is = h_in - frac * (h_in - h_out_is)
+                # 实际抽汽焓 = 入口焓 - 效率 × 等熵焓降
+                h_ext = h_in - eta_isen * (h_in - h_ext_is)
+            elif abs(ext_p - p_out) < 1e-6:
+                # 抽汽压力等于排汽压力: 抽汽焓 = 排汽焓
+                h_ext = h_out_final
             else:
                 h_ext = h_in
 
@@ -243,7 +265,7 @@ class Turbine(BaseComponent):
 
         m_out = max(m_remaining, 0.0)
 
-        # 详细功率计算
+        # 详细功率计算: 按实际抽汽焓逐段累计
         w_detailed = 0.0
         m_stage = m_in
         prev_h = h_in
@@ -253,11 +275,25 @@ class Turbine(BaseComponent):
             ext_p = ext.get("p", 0.0)
             ext_m = m_in * ext.get("m_frac", 0.0)
 
-            if p_in > ext_p > p_out:
-                frac = (prev_p - ext_p) / max(p_in - p_out, 1e-10)
-                h_ext = h_in - frac * eta_isen * (h_in - h_out_is)
+            # 抽汽焓已在上面计算好，直接从 extraction_results 取用
+            ext_result = next(
+                (e for e in extraction_results if e["p"] == ext_p and e["name"] == ext.get("name", "")),
+                None
+            )
+            if ext_result:
+                h_ext = ext_result["h"]
             else:
-                h_ext = prev_h
+                # 重新计算
+                if p_in > ext_p > p_out:
+                    try:
+                        h_ext_is = ps_to_h(ext_p, s_in)
+                        h_ext = h_in - eta_isen * (h_in - h_ext_is)
+                    except Exception:
+                        h_ext = prev_h
+                elif abs(ext_p - p_out) < 1e-6:
+                    h_ext = h_out_final
+                else:
+                    h_ext = prev_h
 
             w_detailed += m_stage * (prev_h - h_ext)
             prev_h = h_ext
@@ -322,11 +358,19 @@ class Turbine(BaseComponent):
 
     def _calculate_multistage(self, eta_isen, p_out, stage, p_in, t_in, h_in, m_in, s_in, 
                              h_out_is, h_out_final, sorted_extractions, section_params, eta_mech, w_in=0.0):
-        """多级分段计算模式"""
+        """多级分段计算模式
+
+        修正要点:
+        1. 每段使用段入口参数重新计算该段的等熵焓降
+        2. 各段效率可独立设置（HP/IP/LP 分别使用对应效率）
+        """
+        from app.properties.steam import ps_to_h, ph_to_t, ph_to_s
+
         extraction_results = []
         section_results = []
         m_remaining = m_in
         prev_h = h_in
+        prev_s = s_in
         prev_p = p_in
         w_detailed = 0.0
 
@@ -334,31 +378,34 @@ class Turbine(BaseComponent):
         all_points = sorted_extractions.copy()
         all_points.append({"name": "exhaust", "p": p_out, "m_frac": 0.0, "h_drop_ratio": 1.0})
 
-        # 计算每段的焓降占比
-        total_h_drop_ratio = sum(ext.get("h_drop_ratio", 1.0 / len(all_points)) for ext in all_points[:-1])
-        if total_h_drop_ratio <= 0:
-            total_h_drop_ratio = 1.0
-
         # 逐级计算
         for i, point in enumerate(all_points):
             point_name = point.get("name", f"point_{i+1}")
             point_p = point.get("p", p_out)
             point_m_frac = point.get("m_frac", 0.0)
-            h_drop_ratio = point.get("h_drop_ratio", 1.0 / len(all_points))
 
-            # 当前段的实际焓降
-            h_drop_actual = (h_drop_ratio / total_h_drop_ratio) * (h_in - h_out_is) * eta_isen
+            # 当前段等熵焓降: 基于段入口参数在出口压力下做等熵膨胀
+            try:
+                h_section_out_is = ps_to_h(point_p, prev_s)
+            except Exception:
+                # fallback: 用压力比例估算等熵焓降
+                total_drop = h_in - h_out_is
+                pressure_ratio = (prev_p - point_p) / max(prev_p - p_out, 1e-10)
+                h_section_out_is = prev_h - pressure_ratio * total_drop
+
+            # 当前段实际焓降 = 效率 × 等熵焓降
+            h_drop_isen = prev_h - h_section_out_is
+            h_drop_actual = eta_isen * h_drop_isen
             
             # 段出口焓
             h_section_out = prev_h - h_drop_actual
             
-            # 段出口温度
+            # 段出口温度、熵
             t_section_out = ph_to_t(point_p, h_section_out)
             s_section_out = ph_to_s(point_p, h_section_out)
 
             # 该段抽汽量
             ext_m = m_in * point_m_frac
-            m_extraction_total_i = ext_m
 
             # 计算该段做功
             w_section = m_remaining * (prev_h - h_section_out)
@@ -372,15 +419,18 @@ class Turbine(BaseComponent):
                 "p_out": point_p,
                 "h_in": prev_h,
                 "h_out": h_section_out,
+                "h_out_is": h_section_out_is,
                 "t_in": ph_to_t(prev_p, prev_h),
                 "t_out": t_section_out,
-                "s_in": ph_to_s(prev_p, prev_h),
+                "s_in": prev_s,
                 "s_out": s_section_out,
                 "m_in": m_remaining,
                 "m_out": m_remaining - ext_m,
                 "m_extracted": ext_m,
                 "w_section": w_section,
-                "h_drop": h_drop_actual,
+                "h_drop_isen": h_drop_isen,
+                "h_drop_actual": h_drop_actual,
+                "eta_isen": eta_isen,
             })
 
             # 如果不是排汽口，记录抽汽结果
@@ -406,8 +456,9 @@ class Turbine(BaseComponent):
                     "m": ext_m,
                 })
 
-            # 更新状态
+            # 更新状态（下一段的入口 = 当前段的出口）
             prev_h = h_section_out
+            prev_s = s_section_out
             prev_p = point_p
             m_remaining -= ext_m
 

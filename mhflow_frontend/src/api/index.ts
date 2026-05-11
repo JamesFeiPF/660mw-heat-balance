@@ -1,5 +1,5 @@
 import axios from 'axios'
-import type { SystemModel, SolveResult, TemplateInfo, ComponentResult, SolveSummary } from '../types'
+import type { SystemModel, SolveResult, TemplateInfo, ComponentResult, SolveSummary, Component, Connection, Port, ComponentType, PortType } from '../types'
 
 const apiClient = axios.create({
   baseURL: '/api',
@@ -25,10 +25,236 @@ apiClient.interceptors.response.use(
   }
 )
 
-/** 加载模型 */
+/**
+ * 判断JSON模型是前端格式还是后端格式
+ */
+function detectModelFormat(json: any): 'frontend' | 'backend' {
+  const comps = json.components || []
+  if (comps.length === 0) return 'frontend'
+  const first = comps[0]
+  // 前端格式特征：有 id, x, y 字段，type 为字符串
+  if (first.id !== undefined && first.x !== undefined && first.y !== undefined) {
+    return 'frontend'
+  }
+  // 后端格式特征：有 component_type, name 字段，没有 id
+  if (first.component_type !== undefined && first.name !== undefined) {
+    return 'backend'
+  }
+  return 'frontend'
+}
+
+/**
+ * 从JSON文件打开模型（自动识别前端/后端格式并转换）
+ */
+export function openModelFromFile(json: any): SystemModel {
+  const format = detectModelFormat(json)
+  console.log(`[openModel] Detected format: ${format}`)
+
+  if (format === 'backend') {
+    return convertBackendToFrontendFormat(json)
+  }
+
+  // 前端格式：直接加载，但做基本的校验和补全
+  const components: Component[] = []
+  for (const comp of json.components || []) {
+    components.push({
+      id: comp.id || `comp_${Math.random().toString(36).slice(2)}`,
+      type: comp.type || 'boiler',
+      name: comp.name || '未命名',
+      x: comp.x ?? 100,
+      y: comp.y ?? 100,
+      params: comp.params || {},
+      inlet_ports: (comp.inlet_ports || []).map((p: any, idx: number) => ({
+        id: p.id || `${comp.id}_in_${idx}`,
+        name: p.name || `in_${idx}`,
+        type: p.type || 'inlet',
+        p: p.p ?? 0,
+        t: p.t ?? 0,
+        h: p.h ?? 0,
+        m: p.m ?? 0,
+        s: p.s ?? 0,
+        w: p.w ?? 0,
+      })),
+      outlet_ports: (comp.outlet_ports || []).map((p: any, idx: number) => ({
+        id: p.id || `${comp.id}_out_${idx}`,
+        name: p.name || `out_${idx}`,
+        type: p.type || 'outlet',
+        p: p.p ?? 0,
+        t: p.t ?? 0,
+        h: p.h ?? 0,
+        m: p.m ?? 0,
+        s: p.s ?? 0,
+        w: p.w ?? 0,
+      })),
+    })
+  }
+
+  const connections: Connection[] = (json.connections || []).map((c: any, idx: number) => ({
+    id: c.id || `conn_${idx}`,
+    from: {
+      componentId: c.from?.componentId || '',
+      portIndex: c.from?.portIndex ?? 0,
+    },
+    to: {
+      componentId: c.to?.componentId || '',
+      portIndex: c.to?.portIndex ?? 0,
+    },
+  }))
+
+  return { components, connections }
+}
+
+/**
+ * 将后端模型数据转换为前端格式
+ * 处理差异：component_type→type、补充id/x/y、字符串连接→对象连接、 turbine抽汽端口展开
+ */
+function convertBackendToFrontendFormat(backendModel: any): SystemModel {
+  const components: Component[] = []
+  const nameToId: Record<string, string> = {}
+
+  // 组件画布布局配置（3缸+8级回热）
+  const layoutMap: Record<string, { x: number; y: number }> = {
+    Boiler: { x: 100, y: 200 },
+    HP_Turbine: { x: 280, y: 200 },
+    IP_Turbine: { x: 480, y: 200 },
+    LP_Turbine: { x: 680, y: 200 },
+    Condenser: { x: 900, y: 400 },
+    CondensatePump: { x: 820, y: 450 },
+    LP_Heater_8: { x: 800, y: 320 },
+    LP_Heater_7: { x: 720, y: 320 },
+    LP_Heater_6: { x: 640, y: 320 },
+    LP_Heater_5: { x: 560, y: 320 },
+    Deaerator: { x: 480, y: 320 },
+    FeedwaterPump: { x: 380, y: 400 },
+    HP_Heater_3: { x: 360, y: 80 },
+    HP_Heater_2: { x: 280, y: 80 },
+    HP_Heater_1: { x: 200, y: 80 },
+    Generator: { x: 900, y: 200 },
+  }
+
+  const typeMap: Record<string, ComponentType> = {
+    boiler: 'boiler',
+    turbine: 'turbine',
+    condenser: 'condenser',
+    heater: 'heater',
+    pump: 'pump',
+    generator: 'generator',
+    tee: 'tee',
+    pipe: 'pipe',
+  }
+
+  let compIndex = 0
+  for (const comp of backendModel.components || []) {
+    const name = comp.name
+    const id = `be_${name.replace(/[^a-zA-Z0-9]/g, '_').toLowerCase()}_${compIndex++}`
+    nameToId[name] = id
+
+    const layout = layoutMap[name] || { x: 100 + (compIndex % 5) * 150, y: 100 + Math.floor(compIndex / 5) * 120 }
+
+    // 入口端口
+    const inlet_ports: Port[] = (comp.inlet_ports || []).map((p: any, idx: number) => ({
+      id: `${id}_in_${idx}`,
+      name: p.name,
+      type: 'inlet' as PortType,
+      p: p.p || 0,
+      t: p.t || 0,
+      h: p.h || 0,
+      m: p.m || 0,
+      s: p.s || 0,
+      w: p.w || 0,
+    }))
+
+    // 出口端口
+    const outlet_ports: Port[] = (comp.outlet_ports || []).map((p: any, idx: number) => ({
+      id: `${id}_out_${idx}`,
+      name: p.name,
+      type: 'outlet' as PortType,
+      p: p.p || 0,
+      t: p.t || 0,
+      h: p.h || 0,
+      m: p.m || 0,
+      s: p.s || 0,
+      w: p.w || 0,
+    }))
+
+    // turbine 组件：根据 extractions / extraction_points 动态添加抽汽出口端口
+    if (comp.component_type === 'turbine') {
+      const extractions = comp.params?.extractions || comp.params?.extraction_points || []
+      for (const ext of extractions) {
+        const extName = ext.name
+        if (!outlet_ports.find((p: Port) => p.name === extName)) {
+          outlet_ports.push({
+            id: `${id}_out_${extName}`,
+            name: extName,
+            type: 'outlet' as PortType,
+            p: ext.p || 0,
+            t: 0,
+            h: 0,
+            m: 0,
+            s: 0,
+          })
+        }
+      }
+    }
+
+    components.push({
+      id,
+      type: typeMap[comp.component_type] || (comp.component_type as ComponentType),
+      name,
+      x: layout.x,
+      y: layout.y,
+      params: { ...comp.params },
+      inlet_ports,
+      outlet_ports,
+    })
+  }
+
+  // 转换连接关系："Component.port" → { componentId, portIndex }
+  const connections: Connection[] = []
+  let connIdx = 0
+  for (const conn of backendModel.connections || []) {
+    const fromParts = (conn.from || '').split('.')
+    const toParts = (conn.to || '').split('.')
+    if (fromParts.length !== 2 || toParts.length !== 2) continue
+
+    const fromName = fromParts[0]
+    const fromPort = fromParts[1]
+    const toName = toParts[0]
+    const toPort = toParts[1]
+
+    const fromComp = components.find((c) => nameToId[fromName] === c.id)
+    const toComp = components.find((c) => nameToId[toName] === c.id)
+    if (!fromComp || !toComp) {
+      console.warn(`[convertBackend] Connection skipped: ${conn.from} -> ${conn.to} (component not found)`)
+      continue
+    }
+
+    const fromPortIndex = fromComp.outlet_ports.findIndex((p) => p.name === fromPort)
+    const toPortIndex = toComp.inlet_ports.findIndex((p) => p.name === toPort)
+    if (fromPortIndex === -1 || toPortIndex === -1) {
+      console.warn(`[convertBackend] Connection skipped: ${conn.from} -> ${conn.to} (port not found)`)
+      continue
+    }
+
+    connections.push({
+      id: `conn_be_${connIdx++}`,
+      from: { componentId: fromComp.id, portIndex: fromPortIndex },
+      to: { componentId: toComp.id, portIndex: toPortIndex },
+    })
+  }
+
+  console.log(`[convertBackend] Converted ${components.length} components, ${connections.length} connections`)
+  return { components, connections }
+}
+
+/** 从后端加载模板模型 */
 export async function loadModel(modelId: string): Promise<SystemModel> {
-  const response = await apiClient.post<SystemModel>('/model/load', { template_id: modelId })
-  return response.data
+  const response = await apiClient.post<any>('/model/load', { template_id: modelId })
+  const backendData = response.data
+  if (!backendData.model_data) {
+    throw new Error('后端返回数据缺少 model_data')
+  }
+  return convertBackendToFrontendFormat(backendData.model_data)
 }
 
 /** 保存模型 */
@@ -112,11 +338,89 @@ function convertModelToBackendFormat(model: SystemModel): any {
     }
   }
 
+  // 转换元件参数: 将前端参数名映射为后端参数名
+  const convertedComponents: any[] = []
+  for (const comp of model.components) {
+    const newComp = { ...comp } as any
+    const params = { ...comp.params } as Record<string, any>
+
+    if (comp.type === 'heater') {
+      // 向后兼容：旧参数名映射
+      if ('terminal_temperature_difference' in params) {
+        params.ttd = params.terminal_temperature_difference
+        delete params.terminal_temperature_difference
+      }
+      if ('drain_cooler_approach' in params) {
+        params.dca = params.drain_cooler_approach
+        delete params.drain_cooler_approach
+      }
+      if ('extraction_pressure' in params) {
+        params.p_heater = params.extraction_pressure
+        delete params.extraction_pressure
+      }
+      if ('deaerator_pressure' in params) {
+        params.p_heater = params.deaerator_pressure
+        delete params.deaerator_pressure
+      }
+      if ('type' in params && !('heater_type' in params)) {
+        const t = Number(params.type)
+        if (t === 0) {
+          params.heater_type = 'DA'
+        } else {
+          const p = params.p_heater || 1.0
+          params.heater_type = p > 2.0 ? 'HP' : 'LP'
+        }
+        delete params.type
+      }
+    }
+
+    if (comp.type === 'pump') {
+      if ('outlet_pressure' in params) {
+        params.p_out = params.outlet_pressure
+        delete params.outlet_pressure
+      }
+      if ('isentropic_efficiency' in params) {
+        params.eta_pump = params.isentropic_efficiency / 100.0
+        delete params.isentropic_efficiency
+      }
+      if ('motor_efficiency' in params) {
+        params.eta_motor = params.motor_efficiency / 100.0
+        delete params.motor_efficiency
+      }
+    }
+
+    if (comp.type === 'condenser') {
+      if ('terminal_temperature_difference' in params) {
+        params.ttd = params.terminal_temperature_difference
+        delete params.terminal_temperature_difference
+      }
+      if ('cooling_range' in params) {
+        params.delta_t_cw = params.cooling_range
+        delete params.cooling_range
+      }
+      if ('condenser_pressure' in params) {
+        params.p_cond = params.condenser_pressure
+        delete params.condenser_pressure
+      }
+    }
+
+    if (comp.type === 'generator') {
+      if ('efficiency' in params) {
+        params.eta_gen = params.efficiency / 100.0
+        delete params.efficiency
+      }
+    }
+
+    newComp.params = params
+    convertedComponents.push(newComp)
+  }
+
   // 保存映射信息供后续使用
   (window as any).__idToNameMap = idToNameMap
 
   const result = {
     ...model,
+    components: convertedComponents,
     connections: convertedConnections,
   }
   
@@ -154,13 +458,22 @@ function convertSolveResultFromBackend(rawResult: any): SolveResult {
     // 尝试获取前端ID，如果找不到则使用后端名称
     const frontEndId = nameToIdMap.get(compName) || compName
     
+    // 只保留 results 中的数值类型参数（过滤掉数组、对象等嵌套结构）
+    const rawResults = data.results || {}
+    const extra_params: Record<string, number> = {}
+    for (const [k, v] of Object.entries(rawResults)) {
+      if (typeof v === 'number') {
+        extra_params[k] = v
+      }
+    }
+
     components.push({
       id: frontEndId,
       name: compName,
       type: data.component_type || data.type || '',
       inlet_ports: data.inlet_ports || [],
       outlet_ports: data.outlet_ports || [],
-      extra_params: data.params || data.results || {},
+      extra_params,
     })
   }
 
@@ -172,7 +485,7 @@ function convertSolveResultFromBackend(rawResult: any): SolveResult {
     heat_rate: perf.heat_rate_kj_kwh || 0,
     coal_consumption: perf.coal_consumption_rate_g_kwh || 0,
     steam_rate: perf.steam_rate_kg_kwh || 0,
-    auxiliary_power_rate: 0, // 后端未提供此数据
+    auxiliary_power_rate: perf.auxiliary_power_rate || 0,
   }
 
   return {
